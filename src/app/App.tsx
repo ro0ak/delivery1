@@ -1,109 +1,221 @@
-import { useState } from 'react';
-import { ThemeProvider } from 'next-themes';
-import { LanguageProvider } from './contexts/LanguageContext';
-import { CartProvider } from './contexts/CartContext';
-import { AuthProvider } from './contexts/AuthContext';
-import { ProductsProvider } from './contexts/ProductsContext';
-import Header from './components/Header';
-import Hero from './components/Hero';
-import Products from './components/Products';
-import Features from './components/Features';
-import Footer from './components/Footer';
-import ProductDetail from './pages/ProductDetail';
-import Cart from './pages/Cart';
-import Shop from './pages/Shop';
-import About from './pages/About';
-import Contact from './pages/Contact';
-import Wholesale from './pages/Wholesale';
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import WholesaleDashboard from './pages/WholesaleDashboard';
-import CustomerDashboard from './pages/CustomerDashboard';
-import { useAuth } from './contexts/AuthContext';
+import { Navigate, Route, Routes } from "react-router";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuth, type UserRole } from "./contexts/AuthContext";
+import DashboardLayout from "./layouts/DashboardLayout";
+import LoginPage from "./pages/auth/LoginPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import TrackingPage from "./pages/public/TrackingPage";
+import DashboardPage from "./pages/DashboardPage";
+import DriverDashboardPage from "./pages/DriverDashboardPage";
+import PlaceholderPage from "./pages/PlaceholderPage";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
-type Page = 'home' | 'product-detail' | 'cart' | 'about' | 'contact' | 'wholesale' | 'login' | 'admin' | 'wholesale-dashboard' | 'customer-dashboard' | 'shop';
+const dashboardRoles: UserRole[] = [
+  "super_admin",
+  "branch_manager",
+  "branch_employee",
+  "accountant",
+  "operations",
+];
 
-export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('home');
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+function HomeRedirect() {
+  const { loading, isAuthenticated, profile } = useAuth();
 
-  const handleNavigate = (page: string) => {
-    setCurrentPage(page as Page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  if (loading) {
+    return null;
+  }
 
-  const handleProductClick = (product: any) => {
-    setSelectedProduct(product);
-    setCurrentPage('product-detail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'home':
-        return (
-          <>
-            <Hero onNavigate={handleNavigate} />
-            <Products
-              onProductClick={handleProductClick}
-              onViewAll={() => handleNavigate('shop')}
-              limit={5}
-            />
-            <Features />
-          </>
-        );
-      case 'shop':
-        return <Shop onProductClick={handleProductClick} />;
-      case 'product-detail':
-        return selectedProduct ? (
-          <ProductDetail
-            product={selectedProduct}
-            onBack={() => setCurrentPage('home')}
-          />
-        ) : null;
-      case 'cart':
-        return <Cart onNavigate={handleNavigate} />;
-      case 'about':
-        return <About />;
-      case 'contact':
-        return <Contact />;
-      case 'wholesale':
-        return <Wholesale />;
-      case 'login':
-        return <Login onSuccess={(role) => {
-          if (role === 'admin') setCurrentPage('admin');
-          else if (role === 'wholesale') setCurrentPage('wholesale-dashboard');
-          else setCurrentPage('customer-dashboard');
-        }} />;
-      case 'admin':
-        return <AdminDashboard />;
-      case 'wholesale-dashboard':
-        return <WholesaleDashboard onProductClick={handleProductClick} />;
-      case 'customer-dashboard':
-        return <CustomerDashboard onNavigate={handleNavigate} />;
-      default:
-        return null;
-    }
-  };
+  if (!isAuthenticated) {
+    return <Navigate to="/tracking" replace />;
+  }
 
   return (
-    <AuthProvider>
-      <ProductsProvider>
-        <CartProvider>
-          <LanguageProvider>
-            <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-              <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-black dark:to-gray-950 transition-colors duration-500">
-                <Header
-                  onNavigate={handleNavigate}
-                  onCartClick={() => handleNavigate('cart')}
-                />
-                <main>{renderPage()}</main>
-                {currentPage === 'home' && <Footer />}
-              </div>
-            </ThemeProvider>
-          </LanguageProvider>
-        </CartProvider>
-      </ProductsProvider>
-    </AuthProvider>
+    <Navigate
+      to={profile?.role === "driver" ? "/driver" : "/dashboard"}
+      replace
+    />
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomeRedirect />} />
+
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/tracking" element={<TrackingPage />} />
+
+      <Route
+        element={
+          <ProtectedRoute allowedRoles={dashboardRoles}>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dashboard" element={<DashboardPage />} />
+
+        <Route
+          path="/shipments"
+          element={
+            <PlaceholderPage
+              title="إدارة الشحنات"
+              description="عرض الشحنات والبحث والتصفية وتحديث الحالات."
+            />
+          }
+        />
+
+        <Route
+          path="/shipments/new"
+          element={
+            <PlaceholderPage
+              title="تسجيل شحنة جديدة"
+              description="تسجيل بيانات المرسل والمستلم والمسار والمبالغ."
+            />
+          }
+        />
+
+        <Route
+          path="/trips"
+          element={
+            <PlaceholderPage
+              title="الرحلات بين الفروع"
+              description="إنشاء الرحلات وإضافة الشحنات وتأكيد الاستلام."
+            />
+          }
+        />
+
+        <Route
+          path="/branches"
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <PlaceholderPage
+                title="إدارة الفروع"
+                description="إضافة الفروع وإيقافها وتعيين المدراء."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute allowedRoles={["super_admin", "branch_manager"]}>
+              <PlaceholderPage
+                title="إدارة الموظفين"
+                description="إدارة الموظفين ورواتبهم وصلاحياتهم."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/drivers"
+          element={
+            <PlaceholderPage
+              title="إدارة السائقين"
+              description="إدارة السائقين والمركبات والتحصيلات."
+            />
+          }
+        />
+
+        <Route
+          path="/customers"
+          element={
+            <PlaceholderPage
+              title="العملاء والتجار"
+              description="إدارة العملاء والتجار والأسعار الخاصة."
+            />
+          }
+        />
+
+        <Route
+          path="/collections"
+          element={
+            <PlaceholderPage
+              title="التحصيلات"
+              description="متابعة مبالغ التحصيل والتسويات."
+            />
+          }
+        />
+
+        <Route
+          path="/cashbox"
+          element={
+            <PlaceholderPage
+              title="صندوق الفرع"
+              description="المقبوضات والمصروفات والإغلاق اليومي."
+            />
+          }
+        />
+
+        <Route
+          path="/expenses"
+          element={
+            <PlaceholderPage
+              title="المصروفات"
+              description="تسجيل المصروفات ورفع الفواتير واعتمادها."
+            />
+          }
+        />
+
+        <Route
+          path="/payroll"
+          element={
+            <PlaceholderPage
+              title="الرواتب"
+              description="الرواتب والعمولات والسلف والخصومات."
+            />
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <PlaceholderPage
+              title="التقارير"
+              description="التقارير اليومية والشهرية والسنوية."
+            />
+          }
+        />
+
+        <Route
+          path="/audit-logs"
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <PlaceholderPage
+                title="سجل العمليات"
+                description="مراجعة العمليات والتعديلات الحساسة."
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <PlaceholderPage
+                title="الإعدادات"
+                description="إدارة هوية الشركة والأسعار والعمولات."
+              />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
+
+      <Route
+        path="/driver"
+        element={
+          <ProtectedRoute allowedRoles={["driver"]}>
+            <DriverDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }
