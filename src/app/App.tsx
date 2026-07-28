@@ -7,6 +7,7 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import TrackingPage from "./pages/public/TrackingPage";
 import DashboardPage from "./pages/DashboardPage";
 import DriverDashboardPage from "./pages/DriverDashboardPage";
+import BranchesPage from "./pages/BranchesPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -90,10 +91,7 @@ export default function App() {
           path="/branches"
           element={
             <ProtectedRoute allowedRoles={["super_admin"]}>
-              <PlaceholderPage
-                title="إدارة الفروع"
-                description="إضافة الفروع وإيقافها وتعيين المدراء."
-              />
+              <BranchesPage />
             </ProtectedRoute>
           }
         />
