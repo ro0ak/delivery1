@@ -7,7 +7,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
+import type {
+  Session,
+  User as SupabaseUser,
+} from "@supabase/supabase-js";
 import { supabase } from "../../utils/supabase";
 
 export type UserRole =
@@ -32,6 +35,7 @@ export interface UserProfile {
 interface LoginResult {
   success: boolean;
   message?: string;
+  role?: UserRole;
 }
 
 interface AuthContextValue {
@@ -40,24 +44,29 @@ interface AuthContextValue {
   profile: UserProfile | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<LoginResult>;
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<LoginResult>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<
+  AuthContextValue | undefined
+>(undefined);
+
+const allowedRoles: UserRole[] = [
+  "super_admin",
+  "branch_manager",
+  "branch_employee",
+  "driver",
+  "accountant",
+  "operations",
+];
 
 function normalizeRole(value: unknown): UserRole {
-  const allowedRoles: UserRole[] = [
-    "super_admin",
-    "branch_manager",
-    "branch_employee",
-    "driver",
-    "accountant",
-    "operations",
-  ];
-
   if (
     typeof value === "string" &&
     allowedRoles.includes(value as UserRole)
@@ -74,13 +83,25 @@ async function getUserProfile(
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, email, full_name, phone, role, branch_id, avatar_url, is_active",
+      `
+        id,
+        email,
+        full_name,
+        phone,
+        role,
+        branch_id,
+        avatar_url,
+        is_active
+      `,
     )
     .eq("id", user.id)
     .maybeSingle();
 
   if (error) {
-    console.error("Failed to load profile:", error.message);
+    console.error(
+      "Failed to load user profile:",
+      error.message,
+    );
   }
 
   return {
@@ -92,17 +113,54 @@ async function getUserProfile(
       user.email?.split("@")[0] ||
       "مستخدم",
     phone: data?.phone || null,
-    role: normalizeRole(data?.role || user.user_metadata?.role),
+    role: normalizeRole(
+      data?.role || user.user_metadata?.role,
+    ),
     branchId: data?.branch_id || null,
     avatarUrl: data?.avatar_url || null,
     isActive: data?.is_active ?? true,
   };
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+export function AuthProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [session, setSession] =
+    useState<Session | null>(null);
+
+  const [profile, setProfile] =
+    useState<UserProfile | null>(null);
+
   const [loading, setLoading] = useState(true);
+
+  const applySession = useCallback(
+    async (nextSession: Session | null) => {
+      setSession(nextSession);
+
+      if (!nextSession?.user) {
+        setProfile(null);
+        return;
+      }
+
+      const loadedProfile = await getUserProfile(
+        nextSession.user,
+      );
+
+      if (!loadedProfile.isActive) {
+        await supabase.auth.signOut();
+
+        setSession(null);
+        setProfile(null);
+
+        return;
+      }
+
+      setProfile(loadedProfile);
+    },
+    [],
+  );
 
   const loadSession = useCallback(async () => {
     setLoading(true);
@@ -117,123 +175,145 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
 
-      setSession(currentSession);
-
-      if (currentSession?.user) {
-        const loadedProfile = await getUserProfile(currentSession.user);
-
-        if (!loadedProfile.isActive) {
-          await supabase.auth.signOut();
-          setSession(null);
-          setProfile(null);
-          return;
-        }
-
-        setProfile(loadedProfile);
-      } else {
-        setProfile(null);
-      }
+      await applySession(currentSession);
     } catch (error) {
-      console.error("Failed to restore session:", error);
+      console.error(
+        "Failed to restore session:",
+        error,
+      );
+
       setSession(null);
       setProfile(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applySession]);
 
   useEffect(() => {
+    let mounted = true;
+
     void loadSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
+    } = supabase.auth.onAuthStateChange(
+      (_event, nextSession) => {
+        if (!mounted) {
+          return;
+        }
 
-      if (!nextSession?.user) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
-
-      window.setTimeout(() => {
-        void getUserProfile(nextSession.user).then((loadedProfile) => {
-          if (!loadedProfile.isActive) {
-            void supabase.auth.signOut();
-            setProfile(null);
+        window.setTimeout(() => {
+          if (!mounted) {
             return;
           }
 
-          setProfile(loadedProfile);
-          setLoading(false);
-        });
-      }, 0);
-    });
+          void applySession(nextSession).finally(() => {
+            if (mounted) {
+              setLoading(false);
+            }
+          });
+        }, 0);
+      },
+    );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [loadSession]);
+  }, [applySession, loadSession]);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<LoginResult> => {
-      const normalizedEmail = email.trim().toLowerCase();
+    async (
+      email: string,
+      password: string,
+    ): Promise<LoginResult> => {
+      const normalizedEmail = email
+        .trim()
+        .toLowerCase();
 
       if (!normalizedEmail || !password) {
         return {
           success: false,
-          message: "أدخل البريد الإلكتروني وكلمة المرور.",
+          message:
+            "أدخل البريد الإلكتروني وكلمة المرور.",
         };
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password,
-      });
+      try {
+        const { data, error } =
+          await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          });
 
-      if (error) {
+        if (error) {
+          return {
+            success: false,
+            message:
+              "بيانات الدخول غير صحيحة أو أن الحساب غير مفعل.",
+          };
+        }
+
+        if (!data.user || !data.session) {
+          return {
+            success: false,
+            message:
+              "تعذر تسجيل الدخول. حاول مرة أخرى.",
+          };
+        }
+
+        const loadedProfile = await getUserProfile(
+          data.user,
+        );
+
+        if (!loadedProfile.isActive) {
+          await supabase.auth.signOut();
+
+          setSession(null);
+          setProfile(null);
+
+          return {
+            success: false,
+            message:
+              "هذا الحساب متوقف. تواصل مع الإدارة.",
+          };
+        }
+
+        setSession(data.session);
+        setProfile(loadedProfile);
+
+        return {
+          success: true,
+          role: loadedProfile.role,
+        };
+      } catch (error) {
+        console.error("Login error:", error);
+
         return {
           success: false,
-          message: "بيانات الدخول غير صحيحة أو أن الحساب غير مفعل.",
+          message:
+            "حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.",
         };
       }
-
-      if (!data.user) {
-        return {
-          success: false,
-          message: "تعذر تسجيل الدخول. حاول مرة أخرى.",
-        };
-      }
-
-      const loadedProfile = await getUserProfile(data.user);
-
-      if (!loadedProfile.isActive) {
-        await supabase.auth.signOut();
-
-        return {
-          success: false,
-          message: "هذا الحساب متوقف. تواصل مع الإدارة.",
-        };
-      }
-
-      setProfile(loadedProfile);
-
-      return {
-        success: true,
-      };
     },
     [],
   );
 
   const logout = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
+    try {
+      const { error } =
+        await supabase.auth.signOut();
 
-    if (error) {
-      console.error("Logout error:", error.message);
+      if (error) {
+        console.error(
+          "Logout error:",
+          error.message,
+        );
+      }
+    } finally {
+      setSession(null);
+      setProfile(null);
     }
-
-    setSession(null);
-    setProfile(null);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -242,9 +322,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const loadedProfile = await getUserProfile(session.user);
-    setProfile(loadedProfile);
-  }, [session]);
+    try {
+      const loadedProfile = await getUserProfile(
+        session.user,
+      );
+
+      if (!loadedProfile.isActive) {
+        await logout();
+        return;
+      }
+
+      setProfile(loadedProfile);
+    } catch (error) {
+      console.error(
+        "Failed to refresh profile:",
+        error,
+      );
+    }
+  }, [logout, session]);
 
   const hasRole = useCallback(
     (...roles: UserRole[]) => {
@@ -263,7 +358,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authUser: session?.user || null,
       profile,
       loading,
-      isAuthenticated: Boolean(session?.user && profile),
+      isAuthenticated: Boolean(
+        session?.user && profile,
+      ),
       login,
       logout,
       refreshProfile,
@@ -291,7 +388,9 @@ export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider.");
+    throw new Error(
+      "useAuth must be used inside AuthProvider.",
+    );
   }
 
   return context;
