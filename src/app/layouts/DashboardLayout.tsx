@@ -3,14 +3,12 @@ import {
   BarChart3,
   Bell,
   Boxes,
-  BriefcaseBusiness,
   Building2,
   Calculator,
   CarFront,
   ChevronLeft,
   CircleDollarSign,
   ClipboardList,
-  FileText,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -34,30 +32,26 @@ interface MenuItem {
   roles: UserRole[];
 }
 
+const allDashboardRoles: UserRole[] = [
+  "super_admin",
+  "branch_manager",
+  "branch_employee",
+  "accountant",
+  "operations",
+];
+
 const menuItems: MenuItem[] = [
   {
     label: "لوحة التحكم",
     path: "/dashboard",
     icon: LayoutDashboard,
-    roles: [
-      "super_admin",
-      "branch_manager",
-      "branch_employee",
-      "accountant",
-      "operations",
-    ],
+    roles: allDashboardRoles,
   },
   {
     label: "الشحنات",
     path: "/shipments",
     icon: Package,
-    roles: [
-      "super_admin",
-      "branch_manager",
-      "branch_employee",
-      "accountant",
-      "operations",
-    ],
+    roles: allDashboardRoles,
   },
   {
     label: "تسجيل شحنة",
@@ -103,13 +97,7 @@ const menuItems: MenuItem[] = [
     label: "العملاء والتجار",
     path: "/customers",
     icon: UserRound,
-    roles: [
-      "super_admin",
-      "branch_manager",
-      "branch_employee",
-      "accountant",
-      "operations",
-    ],
+    roles: allDashboardRoles,
   },
   {
     label: "التحصيلات",
@@ -174,9 +162,7 @@ export default function DashboardLayout() {
       return [];
     }
 
-    return menuItems.filter((item) =>
-      item.roles.includes(profile.role),
-    );
+    return menuItems.filter((item) => item.roles.includes(profile.role));
   }, [profile]);
 
   const activeItem = visibleMenuItems.find((item) => {
@@ -187,7 +173,9 @@ export default function DashboardLayout() {
     return location.pathname.startsWith(item.path);
   });
 
-  const closeSidebar = () => setSidebarOpen(false);
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
 
   return (
     <div className="dashboard-shell">
@@ -201,12 +189,10 @@ export default function DashboardLayout() {
       )}
 
       <aside
-        className={`dashboard-sidebar ${
-          sidebarOpen ? "dashboard-sidebar--open" : ""
-        }`}
+        className={`dashboard-sidebar ${sidebarOpen ? "open" : ""}`}
       >
         <div className="sidebar-brand">
-          <div className="sidebar-brand__logo">
+          <div className="brand-icon">
             <Truck size={26} />
           </div>
 
@@ -235,25 +221,23 @@ export default function DashboardLayout() {
                 to={item.path}
                 onClick={closeSidebar}
                 className={({ isActive }) =>
-                  `sidebar-link ${
-                    isActive ? "sidebar-link--active" : ""
-                  }`
+                  `sidebar-link ${isActive ? "active" : ""}`
                 }
               >
                 <Icon size={20} />
                 <span>{item.label}</span>
-                <ChevronLeft className="sidebar-link__arrow" size={17} />
+                <ChevronLeft className="arrow" size={17} />
               </NavLink>
             );
           })}
         </nav>
 
         <div className="sidebar-user">
-          <div className="sidebar-user__avatar">
+          <div className="avatar">
             {profile?.fullName?.charAt(0) || "م"}
           </div>
 
-          <div className="sidebar-user__details">
+          <div>
             <strong>{profile?.fullName || "مستخدم"}</strong>
             <span>
               {profile ? roleLabels[profile.role] : "مستخدم النظام"}
@@ -262,7 +246,6 @@ export default function DashboardLayout() {
 
           <button
             type="button"
-            className="sidebar-logout"
             title="تسجيل الخروج"
             onClick={() => void logout()}
           >
@@ -273,11 +256,11 @@ export default function DashboardLayout() {
 
       <section className="dashboard-content">
         <header className="dashboard-header">
-          <div className="dashboard-header__start">
+          <div className="header-start">
             <button
               type="button"
               aria-label="فتح القائمة"
-              className="mobile-menu-button"
+              className="mobile-menu"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={24} />
@@ -289,13 +272,16 @@ export default function DashboardLayout() {
             </div>
           </div>
 
-          <div className="dashboard-header__actions">
-            <button type="button" className="header-action">
+          <div className="header-actions">
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="الإشعارات"
+            >
               <Bell size={20} />
-              <span className="header-action__notification" />
             </button>
 
-            <div className="system-status">
+            <div className="status">
               <ShieldCheck size={18} />
               <span>النظام متصل</span>
             </div>
