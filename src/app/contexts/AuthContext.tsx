@@ -247,10 +247,15 @@ export function AuthProvider({
           });
 
         if (error) {
+          console.error("Supabase login error:", {
+            message: error.message,
+            code: error.code,
+            status: error.status,
+          });
+
           return {
             success: false,
-            message:
-              "بيانات الدخول غير صحيحة أو أن الحساب غير مفعل.",
+            message: `خطأ Supabase: ${error.message}`,
           };
         }
 
