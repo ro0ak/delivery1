@@ -39,7 +39,7 @@ const statistics = [
     icon: RotateCcw,
     trend: "down",
   },
-];
+] as const;
 
 export default function DashboardPage() {
   const { profile } = useAuth();
@@ -49,16 +49,18 @@ export default function DashboardPage() {
       <section className="welcome-card">
         <div>
           <span>نظرة عامة</span>
+
           <h2>
             أهلًا بك، {profile?.fullName || "مستخدم النظام"}
           </h2>
+
           <p>
-            ستظهر هنا إحصائيات الشحنات والفروع والتحصيلات
-            حسب صلاحيات حسابك.
+            ستظهر هنا إحصائيات الشحنات والفروع والتحصيلات حسب
+            صلاحيات حسابك.
           </p>
         </div>
 
-        <div className="welcome-card__time">
+        <div className="welcome-time">
           <Clock3 size={22} />
           <span>آخر تحديث</span>
           <strong>
@@ -70,69 +72,55 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="statistics-grid">
+      <section className="stats-grid">
         {statistics.map((statistic) => {
           const Icon = statistic.icon;
 
           return (
-            <article
-              key={statistic.label}
-              className="statistic-card"
-            >
-              <div className="statistic-card__top">
-                <div className="statistic-card__icon">
-                  <Icon size={23} />
-                </div>
-
-                {statistic.trend === "up" && (
-                  <ArrowUpLeft size={19} />
-                )}
-
-                {statistic.trend === "down" && (
-                  <ArrowDownLeft size={19} />
-                )}
+            <article className="stat-card" key={statistic.label}>
+              <div>
+                <Icon size={23} />
               </div>
 
               <span>{statistic.label}</span>
               <strong>{statistic.value}</strong>
-              <p>{statistic.note}</p>
+
+              <p>
+                {statistic.trend === "up" && (
+                  <ArrowUpLeft size={15} />
+                )}
+
+                {statistic.trend === "down" && (
+                  <ArrowDownLeft size={15} />
+                )}
+
+                {statistic.note}
+              </p>
             </article>
           );
         })}
       </section>
 
       <section className="dashboard-grid">
-        <article className="dashboard-panel">
-          <div className="dashboard-panel__header">
-            <div>
-              <h3>حركة الشحنات</h3>
-              <p>ملخص آخر حالات الشحنات</p>
-            </div>
-
-            <button type="button">عرض الجميع</button>
-          </div>
+        <article className="panel">
+          <h3>حركة الشحنات</h3>
 
           <div className="empty-state">
             <Package size={38} />
             <strong>لا توجد شحنات بعد</strong>
             <p>
-              ستظهر حركة الشحنات فور ربط النظام بقاعدة
-              البيانات.
+              ستظهر حركة الشحنات فور ربط النظام بقاعدة البيانات.
             </p>
           </div>
         </article>
 
-        <article className="dashboard-panel">
-          <div className="dashboard-panel__header">
-            <div>
-              <h3>التحصيلات</h3>
-              <p>ملخص المبالغ المالية</p>
-            </div>
-
+        <article className="panel">
+          <h3>
+            التحصيلات
             <CircleDollarSign size={23} />
-          </div>
+          </h3>
 
-          <div className="financial-summary">
+          <div className="finance-list">
             <div>
               <span>تم تحصيله اليوم</span>
               <strong>0.000 ر.ع</strong>
