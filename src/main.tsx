@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router";
+import { HashRouter } from "react-router";
 import { Toaster } from "sonner";
 import App from "./app/App";
 import { AuthProvider } from "./app/contexts/AuthContext";
@@ -14,7 +14,7 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <HashRouter>
       <AuthProvider>
         <App />
         <Toaster
@@ -24,6 +24,6 @@ createRoot(rootElement).render(
           dir="rtl"
         />
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   </React.StrictMode>,
 );
