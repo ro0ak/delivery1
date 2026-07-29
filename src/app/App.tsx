@@ -30,8 +30,9 @@ import BranchesPage from "./pages/BranchesPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
-// 1. إضافة الاستيراد الجديد هنا
 import NewShipmentPage from "./pages/shipments/NewShipmentPage";
+// 1. إضافة الاستيراد الجديد هنا
+import ShipmentOperationsPage from "./pages/shipments/ShipmentOperationsPage";
 
 const officeRoles: UserRole[] = [
   "super_admin",
@@ -148,19 +149,59 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        {/* 2. إضافة المسار الجديد هنا */}
         <Route
           path="/shipments/new"
+          element={
+            <ProtectedRoute
+              allowedRoles={officeRoles}
+            >
+              <NewShipmentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 2. إضافة مسارات العمليات الجديدة هنا */}
+        <Route
+          path="/shipments/search"
           element={
             <ProtectedRoute
               allowedRoles={[
                 "super_admin",
                 "branch_manager",
                 "branch_employee",
+                "accountant",
                 "operations",
               ]}
             >
-              <NewShipmentPage />
+              <ShipmentOperationsPage
+                mode="search"
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/shipments/receive"
+          element={
+            <ProtectedRoute
+              allowedRoles={officeRoles}
+            >
+              <ShipmentOperationsPage
+                mode="receive"
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/shipments/deliver"
+          element={
+            <ProtectedRoute
+              allowedRoles={officeRoles}
+            >
+              <ShipmentOperationsPage
+                mode="deliver"
+              />
             </ProtectedRoute>
           }
         />
