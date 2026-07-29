@@ -1,499 +1,154 @@
 import {
-  Navigate,
-  Route,
-  Routes,
-} from "react-router";
+  FilePlus2,
+  HandHelping,
+  PackageCheck,
+  PackageSearch,
+  Printer,
+  ReceiptText,
+} from "lucide-react";
 
-import ProtectedRoute from "./components/ProtectedRoute";
+import { useNavigate } from "react-router";
 
-import {
-  useAuth,
-  type UserRole,
-} from "./contexts/AuthContext";
-
-import DashboardLayout from "./layouts/DashboardLayout";
-
-import {
-  getRoleHome,
-} from "./lib/roleRoutes";
-
-import LoginPage from "./pages/auth/LoginPage";
-
-import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
-
-import TrackingPage from "./pages/public/TrackingPage";
-
-import WorkModePage from "./pages/staff/WorkModePage";
-
-import OfficeDashboardPage from "./pages/staff/OfficeDashboardPage";
-
-import DeliveryDashboardPage from "./pages/staff/DeliveryDashboardPage";
-
-import BranchManagerDashboardPage from "./pages/branch/BranchManagerDashboardPage";
-
-import CompanyDashboardPage from "./pages/admin/CompanyDashboardPage";
-
-import NewShipmentPage from "./pages/shipments/NewShipmentPage";
-
-import BranchesPage from "./pages/BranchesPage";
-
-import PlaceholderPage from "./pages/PlaceholderPage";
-
-import UnauthorizedPage from "./pages/UnauthorizedPage";
-
-import NotFoundPage from "./pages/NotFoundPage";
-
-const officeRoles: UserRole[] = [
-  "super_admin",
-  "branch_manager",
-  "branch_employee",
-  "operations",
-];
-
-const dashboardRoles: UserRole[] = [
-  "super_admin",
-  "branch_manager",
-  "branch_employee",
-  "accountant",
-  "operations",
-];
-
-function HomeRedirect() {
-  const {
-    loading,
-    isAuthenticated,
-    profile,
-  } = useAuth();
-
-  if (loading) {
-    return null;
-  }
-
-  if (
-    !isAuthenticated ||
-    !profile
-  ) {
-    return (
-      <Navigate
-        to="/tracking"
-        replace
-      />
-    );
-  }
-
-  return (
-    <Navigate
-      to={getRoleHome(
-        profile.role,
-      )}
-      replace
-    />
-  );
+interface OfficeAction {
+  title: string;
+  description: string;
+  icon: typeof FilePlus2;
+  path?: string;
+  enabled: boolean;
 }
 
-export default function App() {
+const officeActions: OfficeAction[] = [
+  {
+    title: "تسجيل شحنة جديدة",
+    description:
+      "تسجيل بيانات المرسل والمستلم وإنشاء رقم تتبع وإيصال.",
+    icon: FilePlus2,
+    path: "/shipments/new",
+    enabled: true,
+  },
+  {
+    title: "استلام شحنة",
+    description:
+      "استلام شحنة وصلت إلى الفرع وتحديث حالتها.",
+    icon: HandHelping,
+    path: "/shipments/receive",
+    enabled: false,
+  },
+  {
+    title: "تسليم للعميل",
+    description:
+      "البحث برقم التتبع وتأكيد تسليم الشحنة للعميل.",
+    icon: PackageCheck,
+    path: "/shipments/deliver",
+    enabled: false,
+  },
+  {
+    title: "البحث عن شحنة",
+    description:
+      "عرض تفاصيل الشحنة وحالتها وسجل الحركة.",
+    icon: PackageSearch,
+    path: "/shipments",
+    enabled: false,
+  },
+  {
+    title: "الفواتير",
+    description:
+      "إنشاء أو تعديل وطباعة إيصالات الشحنات.",
+    icon: ReceiptText,
+    path: "/invoices",
+    enabled: false,
+  },
+  {
+    title: "الطباعة",
+    description:
+      "طباعة إيصال العميل أو كشف الشحنات.",
+    icon: Printer,
+    path: "/print",
+    enabled: false,
+  },
+];
+
+export default function OfficeDashboardPage() {
+  const navigate = useNavigate();
+
+  function handleAction(
+    action: OfficeAction,
+  ) {
+    if (
+      action.enabled &&
+      action.path
+    ) {
+      navigate(action.path);
+    }
+  }
+
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={<HomeRedirect />}
-      />
+    <section
+      className="role-page"
+      dir="rtl"
+    >
+      <div className="role-page__heading">
+        <span>
+          وضع المكتب
+        </span>
 
-      {/* =======================
-          صفحات العملاء
-          ======================= */}
+        <h1>
+          مهام موظف الفرع
+        </h1>
 
-      <Route
-        path="/tracking"
-        element={<TrackingPage />}
-      />
+        <p>
+          نفّذ معاملات العملاء اليومية
+          من شاشة واضحة وسريعة.
+        </p>
+      </div>
 
-      {/* =======================
-          دخول فريق العمل
-          ======================= */}
+      <div className="role-action-grid">
+        {officeActions.map(
+          (action) => {
+            const Icon = action.icon;
 
-      <Route
-        path="/staff/login"
-        element={<LoginPage />}
-      />
+            return (
+              <button
+                type="button"
+                key={action.title}
+                disabled={!action.enabled}
+                onClick={() =>
+                  handleAction(action)
+                }
+                className={
+                  action.enabled
+                    ? "office-action-enabled"
+                    : "office-action-disabled"
+                }
+              >
+                <Icon size={25} />
 
-      <Route
-        path="/login"
-        element={
-          <Navigate
-            to="/staff/login"
-            replace
-          />
-        }
-      />
+                <strong>
+                  {action.title}
+                </strong>
 
-      <Route
-        path="/forgot-password"
-        element={
-          <ForgotPasswordPage />
-        }
-      />
+                <span>
+                  {action.description}
+                </span>
 
-      {/* =======================
-          اختيار وضع الموظف
-          ======================= */}
+                {!action.enabled && (
+                  <small>
+                    قريبًا
+                  </small>
+                )}
+              </button>
+            );
+          },
+        )}
+      </div>
 
-      <Route
-        path="/staff/work-mode"
-        element={
-          <ProtectedRoute
-            allowedRoles={
-              officeRoles
-            }
-          >
-            <WorkModePage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* =======================
-          وضع التوصيل
-          ======================= */}
-
-      <Route
-        path="/staff/delivery"
-        element={
-          <ProtectedRoute
-            allowedRoles={[
-              "driver",
-              "branch_employee",
-              "operations",
-              "branch_manager",
-              "super_admin",
-            ]}
-          >
-            <DeliveryDashboardPage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* =======================
-          الصفحات الداخلية
-          ======================= */}
-
-      <Route
-        element={
-          <ProtectedRoute
-            allowedRoles={
-              dashboardRoles
-            }
-          >
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        {/* موظف المكتب */}
-
-        <Route
-          path="/staff/office"
-          element={
-            <ProtectedRoute
-              allowedRoles={
-                officeRoles
-              }
-            >
-              <OfficeDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* تسجيل شحنة جديدة */}
-
-        <Route
-          path="/shipments/new"
-          element={
-            <ProtectedRoute
-              allowedRoles={
-                officeRoles
-              }
-            >
-              <NewShipmentPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* البحث وإدارة الشحنات */}
-
-        <Route
-          path="/shipments"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-                "branch_manager",
-                "branch_employee",
-                "accountant",
-                "operations",
-              ]}
-            >
-              <PlaceholderPage
-                title="إدارة الشحنات"
-                description="البحث عن الشحنات وعرض التفاصيل وتحديث الحالات."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* استلام شحنة */}
-
-        <Route
-          path="/shipments/receive"
-          element={
-            <ProtectedRoute
-              allowedRoles={
-                officeRoles
-              }
-            >
-              <PlaceholderPage
-                title="استلام شحنة"
-                description="البحث برقم التتبع وتأكيد استلام الشحنة في الفرع."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* تسليم الشحنة للعميل */}
-
-        <Route
-          path="/shipments/deliver"
-          element={
-            <ProtectedRoute
-              allowedRoles={
-                officeRoles
-              }
-            >
-              <PlaceholderPage
-                title="تسليم الشحنة"
-                description="البحث عن الشحنة وتأكيد تسليمها إلى المستلم."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* الفواتير */}
-
-        <Route
-          path="/invoices"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-                "branch_manager",
-                "branch_employee",
-                "accountant",
-                "operations",
-              ]}
-            >
-              <PlaceholderPage
-                title="الفواتير"
-                description="إدارة إيصالات وفواتير الشحنات وطباعتها."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* الطباعة */}
-
-        <Route
-          path="/print"
-          element={
-            <ProtectedRoute
-              allowedRoles={
-                officeRoles
-              }
-            >
-              <PlaceholderPage
-                title="مركز الطباعة"
-                description="طباعة إيصالات العملاء وكشوف الشحنات."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* مدير الفرع */}
-
-        <Route
-          path="/branch"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-                "branch_manager",
-                "accountant",
-              ]}
-            >
-              <BranchManagerDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* المدير العام */}
-
-        <Route
-          path="/company"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-              ]}
-            >
-              <CompanyDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* إدارة الفروع */}
-
-        <Route
-          path="/branches"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-              ]}
-            >
-              <BranchesPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* الموظفون */}
-
-        <Route
-          path="/employees"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-                "branch_manager",
-              ]}
-            >
-              <PlaceholderPage
-                title="إدارة الموظفين"
-                description="إدارة حسابات الموظفين وربطهم بالفروع وتحديد صلاحياتهم."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* السائقون */}
-
-        <Route
-          path="/drivers"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-                "branch_manager",
-                "operations",
-              ]}
-            >
-              <PlaceholderPage
-                title="إدارة السائقين"
-                description="إدارة السائقين والشحنات المسندة والتحصيلات والمستحقات."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* التحصيلات */}
-
-        <Route
-          path="/collections"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-                "branch_manager",
-                "accountant",
-              ]}
-            >
-              <PlaceholderPage
-                title="التحصيلات"
-                description="متابعة الأموال المحصلة والموجودة مع السائقين وتسليمها للفرع."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* المصروفات */}
-
-        <Route
-          path="/expenses"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-                "branch_manager",
-                "accountant",
-              ]}
-            >
-              <PlaceholderPage
-                title="المصروفات"
-                description="تسجيل مصروفات الفرع ورفع الفواتير واعتمادها."
-              />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* الإعدادات */}
-
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "super_admin",
-              ]}
-            >
-              <PlaceholderPage
-                title="إعدادات النظام"
-                description="إدارة أسعار الخدمات والعمولات وبيانات الشركة."
-              />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
-
-      {/* =======================
-          تحويل الروابط القديمة
-          ======================= */}
-
-      <Route
-        path="/dashboard"
-        element={<HomeRedirect />}
-      />
-
-      <Route
-        path="/driver"
-        element={
-          <Navigate
-            to="/staff/delivery"
-            replace
-          />
-        }
-      />
-
-      {/* =======================
-          صفحات الأخطاء
-          ======================= */}
-
-      <Route
-        path="/unauthorized"
-        element={
-          <UnauthorizedPage />
-        }
-      />
-
-      <Route
-        path="*"
-        element={<NotFoundPage />}
-      />
-    </Routes>
+      <div className="role-placeholder">
+        زر «تسجيل شحنة جديدة» أصبح
+        جاهزًا. اضغط عليه لفتح نموذج
+        الشحنة وحفظ البيانات في
+        Supabase وإنشاء رقم التتبع
+        تلقائيًا.
+      </div>
+    </section>
   );
 }
