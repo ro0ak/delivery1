@@ -1,15 +1,22 @@
-import { defineConfig } from "vite";
+import {
+  defineConfig,
+  type Plugin,
+} from "vite";
+
 import path from "path";
-import fs from "fs";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
-function figmaAssetResolver() {
+function figmaAssetResolver(): Plugin {
   return {
     name: "figma-asset-resolver",
 
     resolveId(id: string) {
-      if (id.startsWith("figma:asset/")) {
+      if (
+        id.startsWith(
+          "figma:asset/",
+        )
+      ) {
         const filename = id.replace(
           "figma:asset/",
           "",
@@ -21,37 +28,8 @@ function figmaAssetResolver() {
           filename,
         );
       }
-    },
-  };
-}
 
-function copyHtaccess() {
-  return {
-    name: "copy-htaccess",
-
-    closeBundle() {
-      const sourcePath = path.resolve(
-        __dirname,
-        ".htaccess",
-      );
-
-      const destinationPath = path.resolve(
-        __dirname,
-        "dist/.htaccess",
-      );
-
-      if (!fs.existsSync(sourcePath)) {
-        console.warn(
-          ".htaccess was not found in the project root.",
-        );
-
-        return;
-      }
-
-      fs.copyFileSync(
-        sourcePath,
-        destinationPath,
-      );
+      return null;
     },
   };
 }
@@ -61,12 +39,14 @@ export default defineConfig({
     figmaAssetResolver(),
     react(),
     tailwindcss(),
-    copyHtaccess(),
   ],
 
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(
+        __dirname,
+        "./src",
+      ),
     },
   },
 
