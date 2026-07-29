@@ -9,13 +9,10 @@ import { AuthProvider } from "./app/contexts/AuthContext";
 import "./styles/index.css";
 import "./styles/role-pages.css";
 
-const rootElement =
-  document.getElementById("root");
+const rootElement = document.getElementById("root");
 
 if (!rootElement) {
-  throw new Error(
-    "Root element was not found.",
-  );
+  throw new Error("Root element was not found.");
 }
 
 createRoot(rootElement).render(
