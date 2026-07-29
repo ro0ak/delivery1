@@ -1,8 +1,10 @@
 import {
   BarChart3,
+  BellRing,
   Building2,
   CircleDollarSign,
   Package,
+  Truck,
   Users,
 } from "lucide-react";
 
@@ -26,6 +28,33 @@ const companyStatistics = [
     label: "إيرادات اليوم",
     value: "0.000 ر.ع",
     icon: CircleDollarSign,
+  },
+];
+
+const companyPanels = [
+  {
+    title: "أداء الفروع",
+    description:
+      "ترتيب الفروع حسب عدد الشحنات والتسليمات والإيرادات والأرباح ونسبة المرتجعات.",
+    icon: BarChart3,
+  },
+  {
+    title: "التنبيهات الإدارية",
+    description:
+      "التحصيلات غير المسلمة والصناديق غير المغلقة والشحنات المتأخرة والمصروفات التي تحتاج اعتمادًا.",
+    icon: BellRing,
+  },
+  {
+    title: "ملخص الحسابات",
+    description:
+      "إجمالي الإيرادات والمصروفات ومستحقات السائقين والتجار والرواتب وصافي ربح الشركة.",
+    icon: CircleDollarSign,
+  },
+  {
+    title: "حركة الشركة",
+    description:
+      "جميع الشحنات الموجودة في الفروع والشحنات التي في الطريق والواردة والصادرة بين الفروع.",
+    icon: Truck,
   },
 ];
 
@@ -58,7 +87,9 @@ export default function CompanyDashboardPage() {
             icon: Icon,
           }) => (
             <article key={label}>
-              <Icon size={24} />
+              <div>
+                <Icon size={23} />
+              </div>
 
               <span>
                 {label}
@@ -73,59 +104,27 @@ export default function CompanyDashboardPage() {
       </div>
 
       <div className="manager-panels">
-        <article>
-          <h2>
-            <BarChart3 size={22} />
-            أداء الفروع
-          </h2>
+        {companyPanels.map(
+          ({
+            title,
+            description,
+            icon: Icon,
+          }) => (
+            <article key={title}>
+              <div className="manager-panel__icon">
+                <Icon size={22} />
+              </div>
 
-          <p>
-            سيظهر هنا ترتيب الفروع حسب
-            عدد الشحنات والتسليمات
-            والإيرادات والأرباح ونسبة
-            المرتجعات.
-          </p>
-        </article>
+              <h2>{title}</h2>
 
-        <article>
-          <h2>
-            التنبيهات الإدارية
-          </h2>
+              <p>{description}</p>
 
-          <p>
-            التحصيلات غير المسلمة،
-            والصناديق غير المغلقة،
-            والشحنات المتأخرة أو
-            المفقودة، والمصروفات التي
-            تحتاج إلى اعتماد.
-          </p>
-        </article>
-
-        <article>
-          <h2>
-            ملخص الحسابات
-          </h2>
-
-          <p>
-            إجمالي الإيرادات،
-            والمصروفات، ومستحقات
-            السائقين والتجار، والرواتب،
-            وصافي ربح الشركة.
-          </p>
-        </article>
-
-        <article>
-          <h2>
-            حركة الشركة
-          </h2>
-
-          <p>
-            جميع الشحنات الموجودة في
-            الفروع، والشحنات التي في
-            الطريق، والواردة والصادرة
-            بين الفروع.
-          </p>
-        </article>
+              <button type="button">
+                عرض التفاصيل
+              </button>
+            </article>
+          ),
+        )}
       </div>
     </section>
   );
