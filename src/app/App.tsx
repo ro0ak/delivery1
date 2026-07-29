@@ -30,6 +30,9 @@ import BranchesPage from "./pages/BranchesPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
+// 1. إضافة الاستيراد الجديد هنا
+import NewShipmentPage from "./pages/shipments/NewShipmentPage";
+
 const officeRoles: UserRole[] = [
   "super_admin",
   "branch_manager",
@@ -145,6 +148,23 @@ export default function App() {
           </ProtectedRoute>
         }
       >
+        {/* 2. إضافة المسار الجديد هنا */}
+        <Route
+          path="/shipments/new"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "branch_employee",
+                "operations",
+              ]}
+            >
+              <NewShipmentPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* موظف المكتب */}
         <Route
           path="/staff/office"
