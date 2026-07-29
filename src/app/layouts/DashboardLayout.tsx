@@ -131,17 +131,11 @@ const roleLabels: Record<
 };
 
 export default function DashboardLayout() {
-  const [
-    sidebarOpen,
-    setSidebarOpen,
-  ] = useState(false);
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
 
   const location = useLocation();
-
-  const {
-    profile,
-    logout,
-  } = useAuth();
+  const { profile, logout } = useAuth();
 
   const visibleMenuItems = useMemo(() => {
     if (!profile) {
@@ -180,15 +174,17 @@ export default function DashboardLayout() {
 
       <aside
         className={`dashboard-sidebar ${
-          sidebarOpen ? "open" : ""
+          sidebarOpen
+            ? "dashboard-sidebar--open"
+            : ""
         }`}
       >
         <div className="sidebar-brand">
-          <div className="brand-icon">
+          <div className="sidebar-brand__logo">
             <Truck size={26} />
           </div>
 
-          <div>
+          <div className="sidebar-brand__text">
             <strong>
               ROCK Delivery
             </strong>
@@ -219,18 +215,15 @@ export default function DashboardLayout() {
                 key={path}
                 to={path}
                 onClick={closeSidebar}
-                className={({
-                  isActive,
-                }) =>
+                className={({ isActive }) =>
                   `sidebar-link ${
                     isActive
-                      ? "active"
+                      ? "sidebar-link--active"
                       : ""
                   }`
                 }
               >
                 <Icon size={20} />
-
                 <span>{label}</span>
               </NavLink>
             ),
@@ -238,12 +231,12 @@ export default function DashboardLayout() {
         </nav>
 
         <div className="sidebar-user">
-          <div className="avatar">
+          <div className="sidebar-user__avatar">
             {profile?.fullName?.charAt(0) ||
               "م"}
           </div>
 
-          <div>
+          <div className="sidebar-user__details">
             <strong>
               {profile?.fullName ||
                 "مستخدم"}
@@ -258,6 +251,7 @@ export default function DashboardLayout() {
 
           <button
             type="button"
+            className="sidebar-logout"
             title="تسجيل الخروج"
             onClick={() => void logout()}
           >
@@ -268,10 +262,10 @@ export default function DashboardLayout() {
 
       <section className="dashboard-content">
         <header className="dashboard-header">
-          <div className="header-start">
+          <div className="dashboard-header__start">
             <button
               type="button"
-              className="mobile-menu"
+              className="mobile-menu-button"
               aria-label="فتح القائمة"
               onClick={() =>
                 setSidebarOpen(true)
@@ -294,13 +288,16 @@ export default function DashboardLayout() {
             </div>
           </div>
 
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="الإشعارات"
-          >
-            <Bell size={20} />
-          </button>
+          <div className="dashboard-header__actions">
+            <button
+              type="button"
+              className="header-action"
+              aria-label="الإشعارات"
+            >
+              <Bell size={20} />
+              <span className="header-action__notification" />
+            </button>
+          </div>
         </header>
 
         <main className="dashboard-main">
