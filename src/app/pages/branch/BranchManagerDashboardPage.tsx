@@ -2,6 +2,7 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   CircleDollarSign,
+  ClipboardList,
   PackageCheck,
   Truck,
   Users,
@@ -42,6 +43,33 @@ const branchStatistics = [
   },
 ];
 
+const managerPanels = [
+  {
+    title: "حركة الشحنات",
+    description:
+      "الشحنات الواردة والصادرة والموجودة حاليًا في الفرع والمتوقع وصولها والجاهزة للمغادرة.",
+    icon: PackageCheck,
+  },
+  {
+    title: "الحسابات اليومية",
+    description:
+      "إيرادات الفرع والتحصيلات وعمولات السائقين وحصة الفرع والمصروفات وحالة الصندوق اليومي.",
+    icon: CircleDollarSign,
+  },
+  {
+    title: "أداء الموظفين",
+    description:
+      "عدد الشحنات التي سجلها كل موظف وعمليات الاستلام والتسليم والتعديلات التي أجراها.",
+    icon: ClipboardList,
+  },
+  {
+    title: "أداء السائقين",
+    description:
+      "عدد الشحنات المسندة والمسلّمة والمتعذرة والتحصيلات الموجودة مع كل سائق ومستحقاته.",
+    icon: Truck,
+  },
+];
+
 export default function BranchManagerDashboardPage() {
   const { profile } = useAuth();
 
@@ -76,7 +104,9 @@ export default function BranchManagerDashboardPage() {
             icon: Icon,
           }) => (
             <article key={label}>
-              <Icon size={24} />
+              <div>
+                <Icon size={23} />
+              </div>
 
               <span>
                 {label}
@@ -91,59 +121,27 @@ export default function BranchManagerDashboardPage() {
       </div>
 
       <div className="manager-panels">
-        <article>
-          <h2>
-            حركة الشحنات
-          </h2>
+        {managerPanels.map(
+          ({
+            title,
+            description,
+            icon: Icon,
+          }) => (
+            <article key={title}>
+              <div className="manager-panel__icon">
+                <Icon size={22} />
+              </div>
 
-          <p>
-            ستظهر هنا الشحنات الواردة
-            والصادرة، والشحنات الموجودة
-            حاليًا في الفرع، والشحنات
-            المتوقع وصولها، والشحنات
-            الجاهزة للمغادرة.
-          </p>
-        </article>
+              <h2>{title}</h2>
 
-        <article>
-          <h2>
-            الحسابات اليومية
-          </h2>
+              <p>{description}</p>
 
-          <p>
-            ستظهر هنا إيرادات الفرع،
-            والتحصيلات، وعمولات
-            السائقين، وحصة الفرع،
-            والمصروفات، وحالة الصندوق
-            اليومي.
-          </p>
-        </article>
-
-        <article>
-          <h2>
-            أداء الموظفين
-          </h2>
-
-          <p>
-            عدد الشحنات التي سجلها كل
-            موظف، وعدد عمليات الاستلام
-            والتسليم والتعديلات التي
-            أجراها.
-          </p>
-        </article>
-
-        <article>
-          <h2>
-            أداء السائقين
-          </h2>
-
-          <p>
-            عدد الشحنات المسندة
-            والمسلّمة والمتعذرة،
-            والتحصيلات الموجودة مع كل
-            سائق ومستحقاته.
-          </p>
-        </article>
+              <button type="button">
+                عرض التفاصيل
+              </button>
+            </article>
+          ),
+        )}
       </div>
     </section>
   );
