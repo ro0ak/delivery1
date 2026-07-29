@@ -6,9 +6,8 @@ import { Toaster } from "sonner";
 import App from "./app/App";
 import { AuthProvider } from "./app/contexts/AuthContext";
 
-// حمّل ملفات التنسيق مرة واحدة فقط وبالترتيب الصحيح.
-import "./styles/role-pages.css";
 import "./styles/index.css";
+import "./styles/role-pages.css";
 
 const rootElement = document.getElementById("root");
 
