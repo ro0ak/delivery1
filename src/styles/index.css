@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./role-pages.css";
 
 :root {
   font-family:
