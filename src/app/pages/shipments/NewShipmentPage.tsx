@@ -891,22 +891,7 @@ export default function NewShipmentPage() {
       dir="rtl"
     >
       <div className="new-shipment-heading">
-        <button
-          type="button"
-          onClick={() =>
-            navigate("/staff/office")
-          }
-        >
-          <ArrowRight size={19} />
-
-          العودة
-        </button>
-
         <div>
-          <span>
-            موظف المكتب
-          </span>
-
           <h1>
             تسجيل شحنة جديدة
           </h1>
@@ -916,6 +901,17 @@ export default function NewShipmentPage() {
             والمسار والمبالغ المطلوبة.
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/staff/office")
+          }
+        >
+          <ArrowRight size={18} />
+
+          العودة
+        </button>
       </div>
 
       {errorMessage && (
@@ -932,242 +928,164 @@ export default function NewShipmentPage() {
         className="new-shipment-form"
         onSubmit={handleSubmit}
       >
-        <section className="shipment-form-section">
-          <div className="shipment-section-heading">
-            <div>
-              <UserRound size={22} />
+        <div className="shipment-parties-grid">
+          <section className="shipment-form-section">
+            <div className="shipment-section-heading">
+              <div>
+                <UserRound size={22} />
+              </div>
+
+              <span>
+                <strong>
+                  بيانات المرسل
+                </strong>
+
+                <small>
+                  معلومات الشخص أو التاجر
+                  الذي أرسل الشحنة
+                </small>
+              </span>
             </div>
 
-            <span>
-              <strong>
-                بيانات المرسل
-              </strong>
+            <div className="shipment-form-grid">
+              <label>
+                <span>
+                  نوع المرسل
+                </span>
 
-              <small>
-                معلومات الشخص أو التاجر
-                الذي أرسل الشحنة
-              </small>
-            </span>
-          </div>
-
-          <div className="shipment-form-grid">
-            <label>
-              <span>
-                نوع المرسل
-              </span>
-
-              <select
-                value={form.senderType}
-                onChange={(event) =>
-                  updateField(
-                    "senderType",
-                    event.target
-                      .value as
-                      | "individual"
-                      | "merchant",
-                  )
-                }
-              >
-                <option value="individual">
-                  فرد
-                </option>
-
-                <option value="merchant">
-                  تاجر
-                </option>
-              </select>
-            </label>
-
-            <label>
-              <span>
-                اسم المرسل *
-              </span>
-
-              <input
-                type="text"
-                value={form.senderName}
-                onChange={(event) =>
-                  updateField(
-                    "senderName",
-                    event.target.value,
-                  )
-                }
-                placeholder="الاسم الكامل"
-                required
-              />
-            </label>
-
-            <label>
-              <span>
-                رقم هاتف المرسل *
-              </span>
-
-              <div className="shipment-input-icon">
-                <Phone size={18} />
-
-                <input
-                  type="tel"
-                  value={form.senderPhone}
+                <select
+                  value={form.senderType}
                   onChange={(event) =>
                     updateField(
-                      "senderPhone",
+                      "senderType",
+                      event.target
+                        .value as
+                        | "individual"
+                        | "merchant",
+                    )
+                  }
+                >
+                  <option value="individual">
+                    فرد
+                  </option>
+
+                  <option value="merchant">
+                    تاجر
+                  </option>
+                </select>
+              </label>
+
+              <label>
+                <span>
+                  اسم المرسل *
+                </span>
+
+                <input
+                  type="text"
+                  value={form.senderName}
+                  onChange={(event) =>
+                    updateField(
+                      "senderName",
                       event.target.value,
                     )
                   }
-                  placeholder="9XXXXXXX"
+                  placeholder="الاسم الكامل"
                   required
                 />
-              </div>
-            </label>
-          </div>
-        </section>
+              </label>
 
-        <section className="shipment-form-section">
-          <div className="shipment-section-heading">
-            <div>
-              <MapPin size={22} />
+              <label>
+                <span>
+                  رقم هاتف المرسل *
+                </span>
+
+                <div className="shipment-input-icon">
+                  <Phone size={18} />
+
+                  <input
+                    type="tel"
+                    value={form.senderPhone}
+                    onChange={(event) =>
+                      updateField(
+                        "senderPhone",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="9XXXXXXX"
+                    required
+                  />
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <section className="shipment-form-section">
+            <div className="shipment-section-heading">
+              <div>
+                <UserRound size={22} />
+              </div>
+
+              <span>
+                <strong>
+                  بيانات المستلم
+                </strong>
+
+                <small>
+                  معلومات الشخص الذي سيستلم
+                  الشحنة
+                </small>
+              </span>
             </div>
 
-            <span>
-              <strong>
-                بيانات المستلم
-              </strong>
-
-              <small>
-                معلومات الشخص الذي سيستلم
-                الشحنة
-              </small>
-            </span>
-          </div>
-
-          <div className="shipment-form-grid">
-            <label>
-              <span>
-                اسم المستلم *
-              </span>
-
-              <input
-                type="text"
-                value={
-                  form.recipientName
-                }
-                onChange={(event) =>
-                  updateField(
-                    "recipientName",
-                    event.target.value,
-                  )
-                }
-                placeholder="الاسم الكامل"
-                required
-              />
-            </label>
-
-            <label>
-              <span>
-                رقم هاتف المستلم *
-              </span>
-
-              <div className="shipment-input-icon">
-                <Phone size={18} />
+            <div className="shipment-form-grid">
+              <label>
+                <span>
+                  اسم المستلم *
+                </span>
 
                 <input
-                  type="tel"
+                  type="text"
                   value={
-                    form.recipientPhone
+                    form.recipientName
                   }
                   onChange={(event) =>
                     updateField(
-                      "recipientPhone",
+                      "recipientName",
                       event.target.value,
                     )
                   }
-                  placeholder="9XXXXXXX"
+                  placeholder="الاسم الكامل"
                   required
                 />
-              </div>
-            </label>
+              </label>
 
-            <label>
-              <span>
-                المحافظة
-              </span>
+              <label>
+                <span>
+                  رقم هاتف المستلم *
+                </span>
 
-              <input
-                type="text"
-                value={
-                  form.recipientGovernorate
-                }
-                onChange={(event) =>
-                  updateField(
-                    "recipientGovernorate",
-                    event.target.value,
-                  )
-                }
-                placeholder="مثال: البريمي"
-              />
-            </label>
+                <div className="shipment-input-icon">
+                  <Phone size={18} />
 
-            <label>
-              <span>
-                الولاية أو المنطقة
-              </span>
-
-              <input
-                type="text"
-                value={
-                  form.recipientWilaya
-                }
-                onChange={(event) =>
-                  updateField(
-                    "recipientWilaya",
-                    event.target.value,
-                  )
-                }
-                placeholder="اسم الولاية أو المنطقة"
-              />
-            </label>
-
-            <label className="shipment-full-field">
-              <span>
-                عنوان المستلم
-              </span>
-
-              <textarea
-                value={
-                  form.recipientAddress
-                }
-                onChange={(event) =>
-                  updateField(
-                    "recipientAddress",
-                    event.target.value,
-                  )
-                }
-                placeholder="العنوان التفصيلي للتوصيل"
-                rows={3}
-              />
-            </label>
-
-            <label className="shipment-full-field">
-              <span>
-                رابط الموقع
-              </span>
-
-              <input
-                type="url"
-                value={
-                  form.recipientLocationUrl
-                }
-                onChange={(event) =>
-                  updateField(
-                    "recipientLocationUrl",
-                    event.target.value,
-                  )
-                }
-                placeholder="رابط موقع Google Maps"
-              />
-            </label>
-          </div>
-        </section>
+                  <input
+                    type="tel"
+                    value={
+                      form.recipientPhone
+                    }
+                    onChange={(event) =>
+                      updateField(
+                        "recipientPhone",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="9XXXXXXX"
+                    required
+                  />
+                </div>
+              </label>
+            </div>
+          </section>
+        </div>
 
         <section className="shipment-form-section">
           <div className="shipment-section-heading">
@@ -1282,6 +1200,86 @@ export default function NewShipmentPage() {
                   مكتب إلى منزل
                 </option>
               </select>
+            </label>
+
+            <label>
+              <span>
+                المحافظة
+              </span>
+
+              <input
+                type="text"
+                value={
+                  form.recipientGovernorate
+                }
+                onChange={(event) =>
+                  updateField(
+                    "recipientGovernorate",
+                    event.target.value,
+                  )
+                }
+                placeholder="مثال: البريمي"
+              />
+            </label>
+
+            <label>
+              <span>
+                الولاية أو المنطقة
+              </span>
+
+              <input
+                type="text"
+                value={
+                  form.recipientWilaya
+                }
+                onChange={(event) =>
+                  updateField(
+                    "recipientWilaya",
+                    event.target.value,
+                  )
+                }
+                placeholder="اسم الولاية أو المنطقة"
+              />
+            </label>
+
+            <label className="shipment-full-field">
+              <span>
+                عنوان المستلم
+              </span>
+
+              <textarea
+                value={
+                  form.recipientAddress
+                }
+                onChange={(event) =>
+                  updateField(
+                    "recipientAddress",
+                    event.target.value,
+                  )
+                }
+                placeholder="العنوان التفصيلي للتوصيل"
+                rows={3}
+              />
+            </label>
+
+            <label className="shipment-full-field">
+              <span>
+                رابط الموقع
+              </span>
+
+              <input
+                type="url"
+                value={
+                  form.recipientLocationUrl
+                }
+                onChange={(event) =>
+                  updateField(
+                    "recipientLocationUrl",
+                    event.target.value,
+                  )
+                }
+                placeholder="رابط موقع Google Maps"
+              />
             </label>
           </div>
         </section>
