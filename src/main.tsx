@@ -6,27 +6,9 @@ import { Toaster } from "sonner";
 import App from "./app/App";
 import { AuthProvider } from "./app/contexts/AuthContext";
 
-import "./styles/index.css";
+// حمّل ملفات التنسيق مرة واحدة فقط وبالترتيب الصحيح.
 import "./styles/role-pages.css";
-
-// إلغاء أي Service Worker قديم عند العملاء
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .getRegistrations()
-      .then((registrations) => {
-        registrations.forEach((registration) => {
-          void registration.unregister();
-        });
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to unregister service workers:",
-          error,
-        );
-      });
-  });
-}
+import "./styles/index.css";
 
 const rootElement = document.getElementById("root");
 
