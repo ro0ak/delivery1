@@ -3,17 +3,16 @@ import {
   useState,
   type FormEvent,
 } from "react";
+
 import {
-  ArrowLeft,
   Box,
+  Clock3,
   MapPin,
   PackageSearch,
-  ScanLine,
   Search,
   ShieldCheck,
   Truck,
 } from "lucide-react";
-import { Link } from "react-router";
 
 export default function TrackingPage() {
   const [
@@ -26,8 +25,10 @@ export default function TrackingPage() {
     setSubmittedNumber,
   ] = useState("");
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
   useEffect(() => {
     document.title =
@@ -39,26 +40,17 @@ export default function TrackingPage() {
   ) {
     event.preventDefault();
 
-    setErrorMessage("");
+    const normalizedNumber = trackingNumber
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "");
+
     setSubmittedNumber("");
-
-    const normalizedNumber =
-      trackingNumber
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, "");
-
-    if (!normalizedNumber) {
-      setErrorMessage(
-        "أدخل رقم الشحنة أولًا.",
-      );
-
-      return;
-    }
+    setErrorMessage("");
 
     if (normalizedNumber.length < 5) {
       setErrorMessage(
-        "رقم الشحنة غير صحيح.",
+        "أدخل رقم شحنة صحيحًا.",
       );
 
       return;
@@ -69,160 +61,122 @@ export default function TrackingPage() {
   }
 
   return (
-    <main className="tracking-page">
-      <header className="public-header">
-        <Link
-          to="/tracking"
-          className="public-brand"
-        >
-          <div>
-            <Truck size={25} />
-          </div>
-
-          <span>
-            <strong>
-              ROCK Delivery
-            </strong>
-
-            <small>
-              خدمات التوصيل
-            </small>
-          </span>
-        </Link>
-
-        <Link
-          to="/login"
-          className="secondary-button"
-        >
-          دخول الموظفين
-          <ArrowLeft size={18} />
-        </Link>
-      </header>
-
-      <section className="tracking-hero">
-        <div className="tracking-hero__icon">
-          <PackageSearch size={42} />
+    <main
+      className="customer-tracking"
+      dir="rtl"
+    >
+      <header className="customer-brand">
+        <div className="customer-brand__mark">
+          <Truck size={26} />
         </div>
 
-        <span className="section-eyebrow">
-          تتبع شحنتك
+        <div>
+          <strong>ROCK Delivery</strong>
+          <span>
+            توصيل موثوق بين فروعنا
+          </span>
+        </div>
+      </header>
+
+      <section className="customer-tracking__hero">
+        <div className="customer-tracking__icon">
+          <PackageSearch size={44} />
+        </div>
+
+        <span className="customer-eyebrow">
+          تتبع الشحنة
         </span>
 
         <h1>
-          اعرف مكان شحنتك وآخر تحديث لها
+          شحنتك أقرب مما تتوقع
         </h1>
 
         <p>
-          أدخل رقم الشحنة الموجود في الإيصال
-          لمشاهدة حالة الشحنة وآخر تحديث لها.
+          أدخل رقم التتبع الموجود في الإيصال
+          لمعرفة حالة الشحنة وآخر تحديث.
         </p>
 
         <form
-          className="tracking-search"
+          className="customer-search"
           onSubmit={handleSubmit}
         >
-          <div className="tracking-search__input">
-            <Search size={21} />
+          <Search size={21} />
 
-            <input
-              type="text"
-              value={trackingNumber}
-              placeholder="مثال: ROCK-BRM-SHR-000001"
-              aria-label="رقم الشحنة"
-              autoComplete="off"
-              onChange={(event) => {
-                setTrackingNumber(
-                  event.target.value,
-                );
+          <input
+            type="text"
+            value={trackingNumber}
+            onChange={(event) =>
+              setTrackingNumber(
+                event.target.value,
+              )
+            }
+            placeholder="ROCK-BRM-SHR-000001"
+            aria-label="رقم التتبع"
+            autoComplete="off"
+          />
 
-                if (errorMessage) {
-                  setErrorMessage("");
-                }
-              }}
-              required
-            />
-
-            <button
-              type="button"
-              aria-label="مسح رمز QR"
-              title="مسح رمز QR"
-            >
-              <ScanLine size={23} />
-            </button>
-          </div>
-
-          <button
-            type="submit"
-            className="primary-button"
-          >
+          <button type="submit">
             تتبع الشحنة
           </button>
         </form>
 
         {errorMessage && (
-          <div className="tracking-error">
+          <p className="customer-error">
             {errorMessage}
-          </div>
+          </p>
         )}
 
         {submittedNumber && (
-          <div className="tracking-placeholder-result">
+          <article className="customer-result">
             <Box size={28} />
 
             <div>
               <span>رقم الشحنة</span>
 
-              <strong>
+              <strong dir="ltr">
                 {submittedNumber}
               </strong>
 
               <p>
-                تم تجهيز واجهة التتبع بنجاح.
-                سيتم ربط نتيجة البحث بجدول
-                الشحنات في قاعدة بيانات Supabase
-                في المرحلة التالية.
+                واجهة البحث جاهزة. عند إنشاء
+                جدول الشحنات وواجهة التتبع
+                الآمنة ستظهر هنا الحالة
+                الفعلية ومراحل حركة الشحنة.
               </p>
             </div>
-          </div>
+          </article>
         )}
       </section>
 
-      <section className="tracking-benefits">
+      <section className="customer-benefits">
         <article>
-          <div>
-            <MapPin size={23} />
-          </div>
+          <MapPin size={24} />
 
-          <h2>آخر حالة</h2>
+          <h2>مكان الشحنة</h2>
 
           <p>
-            شاهد آخر مرحلة وصلت إليها شحنتك.
+            شاهد آخر فرع أو مرحلة وصلت
+            إليها شحنتك.
           </p>
         </article>
 
         <article>
-          <div>
-            <Truck size={23} />
-          </div>
+          <Clock3 size={24} />
 
-          <h2>تحديثات واضحة</h2>
+          <h2>آخر تحديث</h2>
 
           <p>
-            تابع حركة الشحنة بين الفروع وحتى
-            التسليم.
+            سجل زمني واضح لحركة الشحنة.
           </p>
         </article>
 
         <article>
-          <div>
-            <ShieldCheck size={23} />
-          </div>
+          <ShieldCheck size={24} />
 
           <h2>خصوصية وأمان</h2>
 
           <p>
-            تظهر للعميل معلومات التتبع العامة
-            فقط.
+            تظهر معلومات التتبع العامة فقط.
           </p>
         </article>
       </section>
