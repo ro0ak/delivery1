@@ -1,5 +1,3 @@
-@import "./role-pages.css";
-
 :root {
 font-family:
 "Tajawal",
@@ -14,8 +12,10 @@ font-synthesis: none;
 text-rendering: optimizeLegibility;
 }
 
-{
-box-sizing: border-box;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 html {
