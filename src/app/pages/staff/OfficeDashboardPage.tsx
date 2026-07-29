@@ -13,7 +13,7 @@ interface OfficeAction {
   title: string;
   description: string;
   icon: typeof FilePlus2;
-  path?: string;
+  path: string;
   enabled: boolean;
 }
 
@@ -29,31 +29,31 @@ const officeActions: OfficeAction[] = [
   {
     title: "استلام شحنة",
     description:
-      "استلام شحنة وصلت إلى الفرع وتحديث حالتها.",
+      "البحث برقم التتبع وتأكيد استلام الشحنة في الفرع.",
     icon: HandHelping,
     path: "/shipments/receive",
-    enabled: false,
+    enabled: true,
   },
   {
     title: "تسليم للعميل",
     description:
-      "البحث برقم التتبع وتأكيد تسليم الشحنة للعميل.",
+      "البحث برقم التتبع وتأكيد تسليم الشحنة إلى المستلم.",
     icon: PackageCheck,
     path: "/shipments/deliver",
-    enabled: false,
+    enabled: true,
   },
   {
     title: "البحث عن شحنة",
     description:
       "عرض تفاصيل الشحنة وحالتها وسجل الحركة.",
     icon: PackageSearch,
-    path: "/shipments",
-    enabled: false,
+    path: "/shipments/search",
+    enabled: true,
   },
   {
     title: "الفواتير",
     description:
-      "إنشاء أو تعديل وطباعة إيصالات الشحنات.",
+      "إنشاء وتعديل وطباعة إيصالات الشحنات.",
     icon: ReceiptText,
     path: "/invoices",
     enabled: false,
@@ -74,10 +74,7 @@ export default function OfficeDashboardPage() {
   function handleAction(
     action: OfficeAction,
   ) {
-    if (
-      action.enabled &&
-      action.path
-    ) {
+    if (action.enabled) {
       navigate(action.path);
     }
   }
@@ -143,11 +140,10 @@ export default function OfficeDashboardPage() {
       </div>
 
       <div className="role-placeholder">
-        زر «تسجيل شحنة جديدة» أصبح
-        جاهزًا. اضغط عليه لفتح نموذج
-        الشحنة وحفظ البيانات في
-        Supabase وإنشاء رقم التتبع
-        تلقائيًا.
+        يمكنك الآن تسجيل شحنة جديدة،
+        والبحث عن الشحنات، واستلامها في
+        الفرع، وتأكيد تسليمها إلى
+        العميل.
       </div>
     </section>
   );
