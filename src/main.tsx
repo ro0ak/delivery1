@@ -9,6 +9,25 @@ import { AuthProvider } from "./app/contexts/AuthContext";
 import "./styles/index.css";
 import "./styles/role-pages.css";
 
+// إلغاء أي Service Worker قديم عند العملاء
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) => {
+        registrations.forEach((registration) => {
+          void registration.unregister();
+        });
+      })
+      .catch((error) => {
+        console.error(
+          "Failed to unregister service workers:",
+          error,
+        );
+      });
+  });
+}
+
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
