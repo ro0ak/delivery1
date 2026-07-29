@@ -1,324 +1,309 @@
 import {
-  useEffect,
+  useMemo,
   useState,
-  type FormEvent,
 } from "react";
 
 import {
-  AlertCircle,
-  Eye,
-  EyeOff,
-  LoaderCircle,
-  LockKeyhole,
-  Mail,
-  ShieldCheck,
+  BarChart3,
+  Bell,
+  Building2,
+  CircleDollarSign,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Package,
+  Receipt,
+  Settings,
   Truck,
+  Users,
+  X,
 } from "lucide-react";
 
 import {
-  Link,
-  Navigate,
+  NavLink,
+  Outlet,
   useLocation,
-  useNavigate,
 } from "react-router";
 
-import { useAuth } from "../../contexts/AuthContext";
-import { getRoleHome } from "../../lib/roleRoutes";
+import {
+  useAuth,
+  type UserRole,
+} from "../contexts/AuthContext";
 
-interface LoginLocationState {
-  from?: string;
+interface MenuItem {
+  label: string;
+  path: string;
+  icon: typeof LayoutDashboard;
+  roles: UserRole[];
 }
 
-export default function LoginPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
+const menuItems: MenuItem[] = [
+  {
+    label: "الإدارة العامة",
+    path: "/company",
+    icon: LayoutDashboard,
+    roles: ["super_admin"],
+  },
+  {
+    label: "لوحة الفرع",
+    path: "/branch",
+    icon: BarChart3,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "وضع المكتب",
+    path: "/staff/office",
+    icon: Package,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "branch_employee",
+      "operations",
+    ],
+  },
+  {
+    label: "الفروع",
+    path: "/branches",
+    icon: Building2,
+    roles: ["super_admin"],
+  },
+  {
+    label: "الموظفون",
+    path: "/employees",
+    icon: Users,
+    roles: [
+      "super_admin",
+      "branch_manager",
+    ],
+  },
+  {
+    label: "السائقون",
+    path: "/drivers",
+    icon: Truck,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "operations",
+    ],
+  },
+  {
+    label: "التحصيلات",
+    path: "/collections",
+    icon: CircleDollarSign,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "المصروفات",
+    path: "/expenses",
+    icon: Receipt,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "الإعدادات",
+    path: "/settings",
+    icon: Settings,
+    roles: ["super_admin"],
+  },
+];
 
-  const {
-    login,
-    profile,
-    isAuthenticated,
-    loading,
-  } = useAuth();
+const roleLabels: Record<
+  UserRole,
+  string
+> = {
+  super_admin: "المدير العام",
+  branch_manager: "مدير الفرع",
+  branch_employee: "موظف الفرع",
+  driver: "السائق",
+  accountant: "المحاسب",
+  operations: "موظف العمليات",
+};
 
-  const [email, setEmail] =
-    useState("");
-
-  const [password, setPassword] =
-    useState("");
-
-  const [
-    showPassword,
-    setShowPassword,
-  ] = useState(false);
-
-  const [submitting, setSubmitting] =
+export default function DashboardLayout() {
+  const [sidebarOpen, setSidebarOpen] =
     useState(false);
 
-  const [
-    errorMessage,
-    setErrorMessage,
-  ] = useState("");
+  const location = useLocation();
+  const { profile, logout } = useAuth();
 
-  useEffect(() => {
-    document.title =
-      "دخول فريق العمل | ROCK Delivery";
-  }, []);
+  const visibleMenuItems = useMemo(() => {
+    if (!profile) {
+      return [];
+    }
 
-  if (
-    !loading &&
-    isAuthenticated &&
-    profile
-  ) {
-    return (
-      <Navigate
-        to={getRoleHome(profile.role)}
-        replace
-      />
+    return menuItems.filter((item) =>
+      item.roles.includes(profile.role),
     );
-  }
+  }, [profile]);
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
+  const activeItem =
+    visibleMenuItems.find((item) =>
+      location.pathname.startsWith(
+        item.path,
+      ),
+    );
 
-    if (submitting) {
-      return;
-    }
-
-    setSubmitting(true);
-    setErrorMessage("");
-
-    try {
-      const result = await login(
-        email,
-        password,
-      );
-
-      if (!result.success) {
-        setErrorMessage(
-          result.message ||
-            "تعذر تسجيل الدخول.",
-        );
-
-        return;
-      }
-
-      const state =
-        location.state as LoginLocationState | null;
-
-      const requestedPath =
-        typeof state?.from === "string"
-          ? state.from
-          : null;
-
-      const userRole =
-        result.role ||
-        profile?.role ||
-        "branch_employee";
-
-      const defaultRoute =
-        getRoleHome(userRole);
-
-      const shouldUseRequestedPath =
-        requestedPath &&
-        requestedPath !== "/staff/login" &&
-        requestedPath !== "/login";
-
-      navigate(
-        shouldUseRequestedPath
-          ? requestedPath
-          : defaultRoute,
-        {
-          replace: true,
-        },
-      );
-    } catch (error) {
-      console.error(
-        "Login page error:",
-        error,
-      );
-
-      setErrorMessage(
-        "حدث خطأ غير متوقع. حاول مرة أخرى.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
+  function closeSidebar() {
+    setSidebarOpen(false);
   }
 
   return (
-    <main
-      className="staff-login"
+    <div
+      className="dashboard-shell"
       dir="rtl"
     >
-      <section className="staff-login__visual">
-        <div className="staff-login__brand">
-          <Truck size={31} />
-        </div>
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-overlay"
+          aria-label="إغلاق القائمة"
+          onClick={closeSidebar}
+        />
+      )}
 
-        <span>
-          ROCK DELIVERY OPERATIONS
-        </span>
+      <aside
+        className={`dashboard-sidebar ${
+          sidebarOpen
+            ? "dashboard-sidebar--open"
+            : ""
+        }`}
+      >
+        <div className="sidebar-brand">
+          <div className="sidebar-brand__logo">
+            <Truck size={26} />
+          </div>
 
-        <h1>
-          مساحة عمل واحدة،
-          <br />
-          لكل فريق التوصيل.
-        </h1>
-
-        <p>
-          دخول آمن للموظفين والسائقين
-          ومديري الفروع والإدارة العامة.
-        </p>
-
-        <div className="staff-login__trust">
-          <ShieldCheck size={21} />
-
-          <span>
-            صلاحيات حسب الحساب والفرع
-          </span>
-        </div>
-      </section>
-
-      <section className="staff-login__form-side">
-        <form
-          className="staff-login__form"
-          onSubmit={handleSubmit}
-        >
-          <div className="staff-login__mobile-logo">
-            <div>
-              <Truck size={25} />
-            </div>
-
+          <div className="sidebar-brand__text">
             <strong>
               ROCK Delivery
             </strong>
+
+            <span>
+              نظام إدارة التوصيل
+            </span>
           </div>
 
-          <span className="staff-login__eyebrow">
-            بوابة فريق العمل
-          </span>
+          <button
+            type="button"
+            className="sidebar-close"
+            aria-label="إغلاق القائمة"
+            onClick={closeSidebar}
+          >
+            <X size={22} />
+          </button>
+        </div>
 
-          <h2>تسجيل الدخول</h2>
-
-          <p>
-            استخدم الحساب الذي أنشأته
-            إدارة الشركة.
-          </p>
-
-          {errorMessage && (
-            <div className="form-alert form-alert--error">
-              <AlertCircle size={19} />
-
-              <span>
-                {errorMessage}
-              </span>
-            </div>
-          )}
-
-          <label className="form-group">
-            <span>
-              البريد الإلكتروني
-            </span>
-
-            <div className="form-input">
-              <Mail size={19} />
-
-              <input
-                type="email"
-                value={email}
-                onChange={(event) =>
-                  setEmail(
-                    event.target.value,
-                  )
-                }
-                placeholder="name@company.com"
-                autoComplete="email"
-                inputMode="email"
-                disabled={submitting}
-                required
-              />
-            </div>
-          </label>
-
-          <label className="form-group">
-            <span>
-              كلمة المرور
-            </span>
-
-            <div className="form-input">
-              <LockKeyhole size={19} />
-
-              <input
-                type={
-                  showPassword
-                    ? "text"
-                    : "password"
-                }
-                value={password}
-                onChange={(event) =>
-                  setPassword(
-                    event.target.value,
-                  )
-                }
-                placeholder="أدخل كلمة المرور"
-                autoComplete="current-password"
-                disabled={submitting}
-                required
-              />
-
-              <button
-                type="button"
-                aria-label={
-                  showPassword
-                    ? "إخفاء كلمة المرور"
-                    : "إظهار كلمة المرور"
-                }
-                disabled={submitting}
-                onClick={() =>
-                  setShowPassword(
-                    (currentValue) =>
-                      !currentValue,
-                  )
+        <nav className="sidebar-nav">
+          {visibleMenuItems.map(
+            ({
+              label,
+              path,
+              icon: Icon,
+            }) => (
+              <NavLink
+                key={path}
+                to={path}
+                onClick={closeSidebar}
+                className={({ isActive }) =>
+                  `sidebar-link ${
+                    isActive
+                      ? "sidebar-link--active"
+                      : ""
+                  }`
                 }
               >
-                {showPassword ? (
-                  <EyeOff size={19} />
-                ) : (
-                  <Eye size={19} />
-                )}
-              </button>
-            </div>
-          </label>
+                <Icon size={20} />
+                <span>{label}</span>
+              </NavLink>
+            ),
+          )}
+        </nav>
 
-          <Link
-            className="staff-login__forgot"
-            to="/forgot-password"
-          >
-            نسيت كلمة المرور؟
-          </Link>
+        <div className="sidebar-user">
+          <div className="sidebar-user__avatar">
+            {profile?.fullName?.charAt(0) ||
+              "م"}
+          </div>
+
+          <div className="sidebar-user__details">
+            <strong>
+              {profile?.fullName ||
+                "مستخدم"}
+            </strong>
+
+            <span>
+              {profile
+                ? roleLabels[profile.role]
+                : ""}
+            </span>
+          </div>
 
           <button
-            className="staff-login__submit"
-            type="submit"
-            disabled={submitting}
+            type="button"
+            className="sidebar-logout"
+            title="تسجيل الخروج"
+            onClick={() => void logout()}
           >
-            {submitting ? (
-              <>
-                <LoaderCircle
-                  className="button-spinner"
-                  size={20}
-                />
-
-                جاري تسجيل الدخول...
-              </>
-            ) : (
-              "دخول النظام"
-            )}
+            <LogOut size={19} />
           </button>
-        </form>
+        </div>
+      </aside>
+
+      <section className="dashboard-content">
+        <header className="dashboard-header">
+          <div className="dashboard-header__start">
+            <button
+              type="button"
+              className="mobile-menu-button"
+              aria-label="فتح القائمة"
+              onClick={() =>
+                setSidebarOpen(true)
+              }
+            >
+              <Menu size={24} />
+            </button>
+
+            <div>
+              <p>
+                مرحبًا،{" "}
+                {profile?.fullName ||
+                  "مستخدم النظام"}
+              </p>
+
+              <h1>
+                {activeItem?.label ||
+                  "نظام التوصيل"}
+              </h1>
+            </div>
+          </div>
+
+          <div className="dashboard-header__actions">
+            <button
+              type="button"
+              className="header-action"
+              aria-label="الإشعارات"
+            >
+              <Bell size={20} />
+              <span className="header-action__notification" />
+            </button>
+          </div>
+        </header>
+
+        <main className="dashboard-main">
+          <Outlet />
+        </main>
       </section>
-    </main>
+    </div>
   );
 }
