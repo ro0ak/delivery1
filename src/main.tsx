@@ -17,6 +17,7 @@ createRoot(rootElement).render(
     <HashRouter>
       <AuthProvider>
         <App />
+
         <Toaster
           position="top-center"
           richColors
