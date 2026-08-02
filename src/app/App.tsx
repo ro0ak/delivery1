@@ -27,6 +27,11 @@ import BranchManagerDashboardPage from "./pages/branch/BranchManagerDashboardPag
 import CompanyDashboardPage from "./pages/admin/CompanyDashboardPage";
 
 import BranchesPage from "./pages/BranchesPage";
+import EmployeesPage from "./pages/EmployeesPage";
+import DriversPage from "./pages/DriversPage";
+import CollectionsPage from "./pages/CollectionsPage";
+import ExpensesPage from "./pages/ExpensesPage";
+import SettingsPage from "./pages/SettingsPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -252,6 +257,76 @@ export default function App() {
               allowedRoles={["super_admin"]}
             >
               <BranchesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+              ]}
+            >
+              <EmployeesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/drivers"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "operations",
+              ]}
+            >
+              <DriversPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/collections"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <CollectionsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/expenses"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <ExpensesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute
+              allowedRoles={["super_admin"]}
+            >
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

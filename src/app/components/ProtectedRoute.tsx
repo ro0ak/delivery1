@@ -51,6 +51,18 @@ export default function ProtectedRoute({
   }
 
   if (
+    profile.role === "branch_manager" &&
+    !profile.branchId
+  ) {
+    return (
+      <Navigate
+        to="/unauthorized"
+        replace
+      />
+    );
+  }
+
+  if (
     allowedRoles?.length &&
     !allowedRoles.includes(profile.role)
   ) {

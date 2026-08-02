@@ -4,9 +4,7 @@ import {
   PackageCheck,
   PackageSearch,
   Printer,
-  ReceiptText,
 } from "lucide-react";
-
 import { useNavigate } from "react-router";
 
 interface OfficeAction {
@@ -14,136 +12,86 @@ interface OfficeAction {
   description: string;
   icon: typeof FilePlus2;
   path: string;
-  enabled: boolean;
 }
 
 const officeActions: OfficeAction[] = [
   {
-    title: "تسجيل شحنة جديدة",
+    title: "New Shipment",
     description:
-      "تسجيل بيانات المرسل والمستلم وإنشاء رقم تتبع وإيصال.",
+      "Create a new shipment with sender/receiver details and tracking number.",
     icon: FilePlus2,
     path: "/shipments/new",
-    enabled: true,
   },
   {
-    title: "استلام شحنة",
+    title: "Search Shipment",
     description:
-      "البحث برقم التتبع وتأكيد استلام الشحنة في الفرع.",
-    icon: HandHelping,
-    path: "/shipments/receive",
-    enabled: true,
-  },
-  {
-    title: "تسليم للعميل",
-    description:
-      "البحث برقم التتبع وتأكيد تسليم الشحنة إلى المستلم.",
-    icon: PackageCheck,
-    path: "/shipments/deliver",
-    enabled: true,
-  },
-  {
-    title: "البحث عن شحنة",
-    description:
-      "عرض تفاصيل الشحنة وحالتها وسجل الحركة.",
+      "Find shipment details, branch location, and current movement status.",
     icon: PackageSearch,
     path: "/shipments/search",
-    enabled: true,
   },
   {
-    title: "الفواتير",
+    title: "Receive Shipment",
     description:
-      "إنشاء وتعديل وطباعة إيصالات الشحنات.",
-    icon: ReceiptText,
-    path: "/invoices",
-    enabled: false,
+      "Confirm arrival and register incoming shipment reception in branch.",
+    icon: HandHelping,
+    path: "/shipments/receive",
   },
   {
-    title: "الطباعة",
+    title: "Deliver Shipment",
     description:
-      "طباعة إيصال العميل أو كشف الشحنات.",
+      "Complete delivery handover and mark shipment as delivered.",
+    icon: PackageCheck,
+    path: "/shipments/deliver",
+  },
+  {
+    title: "Print Invoices",
+    description:
+      "Open shipment records and print customer invoices and receipts.",
     icon: Printer,
-    path: "/print",
-    enabled: false,
+    path: "/shipments/search",
   },
 ];
 
 export default function OfficeDashboardPage() {
   const navigate = useNavigate();
 
-  function handleAction(
-    action: OfficeAction,
-  ) {
-    if (action.enabled) {
-      navigate(action.path);
-    }
-  }
-
   return (
-    <section
-      className="role-page"
-      dir="rtl"
-    >
-      <div className="role-page__heading">
-        <span>
-          وضع المكتب
+    <section className="space-y-6" dir="ltr">
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <span className="inline-flex rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+          Office Mode
         </span>
 
-        <h1>
-          مهام موظف الفرع
+        <h1 className="mt-3 text-2xl font-bold text-gray-950">
+          Branch Office Operations
         </h1>
 
-        <p>
-          نفّذ معاملات العملاء اليومية
-          من شاشة واضحة وسريعة.
+        <p className="mt-2 max-w-3xl text-sm text-gray-500">
+          Access daily shipment workflows through a clean, structured control panel.
         </p>
       </div>
 
-      <div className="role-action-grid">
-        {officeActions.map(
-          (action) => {
-            const Icon = action.icon;
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {officeActions.map((action) => {
+          const Icon = action.icon;
 
-            return (
-              <button
-                type="button"
-                key={action.title}
-                disabled={!action.enabled}
-                onClick={() =>
-                  handleAction(action)
-                }
-                className={
-                  action.enabled
-                    ? "office-action-enabled"
-                    : "office-action-disabled"
-                }
-              >
-                <Icon size={25} />
+          return (
+            <button
+              type="button"
+              key={action.title}
+              onClick={() => navigate(action.path)}
+              className="group rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md"
+            >
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-700 transition group-hover:bg-red-100">
+                <Icon size={20} />
+              </div>
 
-                <strong>
-                  {action.title}
-                </strong>
+              <h2 className="text-base font-semibold text-gray-900">{action.title}</h2>
 
-                <span>
-                  {action.description}
-                </span>
-
-                {!action.enabled && (
-                  <small>
-                    قريبًا
-                  </small>
-                )}
-              </button>
-            );
-          },
-        )}
-      </div>
-
-      <div className="role-placeholder">
-        يمكنك الآن تسجيل شحنة جديدة،
-        والبحث عن الشحنات، واستلامها في
-        الفرع، وتأكيد تسليمها إلى
-        العميل.
+              <p className="mt-2 text-sm leading-6 text-gray-500">{action.description}</p>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
