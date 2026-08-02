@@ -12,7 +12,6 @@ import {
   LockKeyhole,
   Mail,
   ShieldCheck,
-  Truck,
 } from "lucide-react";
 
 import {
@@ -24,6 +23,7 @@ import {
 
 import { useAuth } from "../../contexts/AuthContext";
 import { getRoleHome } from "../../lib/roleRoutes";
+import RockLogo, { RockLogoBadge } from "../../components/RockLogo";
 
 interface LoginLocationState {
   from?: string;
@@ -145,7 +145,7 @@ export default function LoginPage() {
       <section className="staff-login__visual">
         <div className="staff-login__visual-content">
           <div className="staff-login__brand">
-            <Truck size={31} />
+            <RockLogo size={60} />
           </div>
 
           <span className="staff-login__visual-eyebrow">
@@ -170,6 +170,15 @@ export default function LoginPage() {
               صلاحيات حسب الحساب والفرع
             </span>
           </div>
+
+          <div className="staff-login__mascot-badge">
+            <RockLogo size={52} />
+            <span>
+              Golden Rock Logistics
+              <br />
+              <strong style={{ color: "#D71920" }}>ROCK Delivery ERP</strong>
+            </span>
+          </div>
         </div>
       </section>
 
@@ -180,7 +189,7 @@ export default function LoginPage() {
         >
           <div className="staff-login__mobile-logo">
             <div>
-              <Truck size={25} />
+              <RockLogoBadge size={48} />
             </div>
 
             <strong>

@@ -29,6 +29,7 @@ import {
   useAuth,
   type UserRole,
 } from "../contexts/AuthContext";
+import { RockLogoBadge } from "../components/RockLogo";
 
 interface MenuItem {
   label: string;
@@ -221,7 +222,7 @@ export default function DashboardLayout() {
       >
         <div className="sidebar-brand">
           <div className="sidebar-brand__logo">
-            <Truck size={26} />
+            <RockLogoBadge size={44} />
           </div>
 
           <div className="sidebar-brand__text">
