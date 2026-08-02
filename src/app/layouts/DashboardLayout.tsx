@@ -29,6 +29,7 @@ import {
   useAuth,
   type UserRole,
 } from "../contexts/AuthContext";
+import { RockLogoBadge } from "../components/RockLogo";
 
 interface MenuItem {
   label: string;
@@ -48,6 +49,46 @@ const menuItems: MenuItem[] = [
     label: "لوحة الفرع",
     path: "/branch",
     icon: BarChart3,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "حركة الشحنات",
+    path: "/branch/shipment-movement",
+    icon: Package,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "الحسابات اليومية",
+    path: "/branch/daily-accounts",
+    icon: CircleDollarSign,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "أداء الموظفين",
+    path: "/branch/employee-performance",
+    icon: Users,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "أداء السائقين",
+    path: "/branch/driver-performance",
+    icon: Truck,
     roles: [
       "super_admin",
       "branch_manager",
@@ -181,7 +222,7 @@ export default function DashboardLayout() {
       >
         <div className="sidebar-brand">
           <div className="sidebar-brand__logo">
-            <Truck size={26} />
+            <RockLogoBadge size={44} />
           </div>
 
           <div className="sidebar-brand__text">

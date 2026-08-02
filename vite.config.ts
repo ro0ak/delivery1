@@ -54,4 +54,30 @@ export default defineConfig({
     "**/*.svg",
     "**/*.csv",
   ],
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) {
+            return undefined;
+          }
+
+          if (id.includes("@supabase")) {
+            return "supabase";
+          }
+
+          if (
+            id.includes("@radix-ui") ||
+            id.includes("lucide-react") ||
+            id.includes("recharts")
+          ) {
+            return "ui-vendor";
+          }
+
+          return "vendor";
+        },
+      },
+    },
+  },
 });

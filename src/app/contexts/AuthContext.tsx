@@ -51,6 +51,9 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
+  isSuperAdmin: boolean;
+  isBranchManager: boolean;
+  canAccessBranch: (branchId: string | null) => boolean;
 }
 
 const AuthContext = createContext<
@@ -104,21 +107,37 @@ async function getUserProfile(
     );
   }
 
+  if (!data) {
+    return {
+      id: user.id,
+      email: user.email || "",
+      fullName:
+        user.user_metadata?.full_name ||
+        user.email?.split("@")[0] ||
+        "مستخدم",
+      phone: null,
+      role: normalizeRole(user.user_metadata?.role),
+      branchId: null,
+      avatarUrl: null,
+      isActive: false,
+    };
+  }
+
   return {
     id: user.id,
-    email: data?.email || user.email || "",
+    email: data.email || user.email || "",
     fullName:
-      data?.full_name ||
+      data.full_name ||
       user.user_metadata?.full_name ||
       user.email?.split("@")[0] ||
       "مستخدم",
-    phone: data?.phone || null,
+    phone: data.phone || null,
     role: normalizeRole(
-      data?.role || user.user_metadata?.role,
+      data.role || user.user_metadata?.role,
     ),
-    branchId: data?.branch_id || null,
-    avatarUrl: data?.avatar_url || null,
-    isActive: data?.is_active ?? true,
+    branchId: data.branch_id || null,
+    avatarUrl: data.avatar_url || null,
+    isActive: data.is_active ?? true,
   };
 }
 
@@ -357,6 +376,35 @@ export function AuthProvider({
     [profile],
   );
 
+  const isSuperAdmin =
+    profile?.role === "super_admin";
+
+  const isBranchManager =
+    profile?.role === "branch_manager";
+
+  const canAccessBranch = useCallback(
+    (branchId: string | null) => {
+      if (!profile) {
+        return false;
+      }
+
+      if (profile.role === "super_admin") {
+        return true;
+      }
+
+      if (profile.role === "branch_manager") {
+        return Boolean(
+          profile.branchId &&
+            branchId &&
+            profile.branchId === branchId,
+        );
+      }
+
+      return profile.branchId === branchId;
+    },
+    [profile],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
@@ -370,6 +418,9 @@ export function AuthProvider({
       logout,
       refreshProfile,
       hasRole,
+      isSuperAdmin,
+      isBranchManager,
+      canAccessBranch,
     }),
     [
       session,
@@ -379,6 +430,9 @@ export function AuthProvider({
       logout,
       refreshProfile,
       hasRole,
+      isSuperAdmin,
+      isBranchManager,
+      canAccessBranch,
     ],
   );
 

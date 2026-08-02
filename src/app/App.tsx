@@ -24,9 +24,18 @@ import OfficeDashboardPage from "./pages/staff/OfficeDashboardPage";
 import DeliveryDashboardPage from "./pages/staff/DeliveryDashboardPage";
 
 import BranchManagerDashboardPage from "./pages/branch/BranchManagerDashboardPage";
+import BranchShipmentMovementPage from "./pages/branch/BranchShipmentMovementPage";
+import DailyAccountsPage from "./pages/branch/DailyAccountsPage";
+import EmployeePerformancePage from "./pages/branch/EmployeePerformancePage";
+import DriverPerformancePage from "./pages/branch/DriverPerformancePage";
 import CompanyDashboardPage from "./pages/admin/CompanyDashboardPage";
 
 import BranchesPage from "./pages/BranchesPage";
+import EmployeesPage from "./pages/EmployeesPage";
+import DriversPage from "./pages/DriversPage";
+import CollectionsPage from "./pages/CollectionsPage";
+import ExpensesPage from "./pages/ExpensesPage";
+import SettingsPage from "./pages/SettingsPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -232,6 +241,66 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/branch/shipment-movement"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <BranchShipmentMovementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/branch/daily-accounts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <DailyAccountsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/branch/employee-performance"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <EmployeePerformancePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/branch/driver-performance"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <DriverPerformancePage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* المدير العام */}
         <Route
           path="/company"
@@ -252,6 +321,76 @@ export default function App() {
               allowedRoles={["super_admin"]}
             >
               <BranchesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+              ]}
+            >
+              <EmployeesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/drivers"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "operations",
+              ]}
+            >
+              <DriversPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/collections"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <CollectionsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/expenses"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <ExpensesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute
+              allowedRoles={["super_admin"]}
+            >
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

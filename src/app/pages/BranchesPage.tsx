@@ -22,6 +22,12 @@ import {
 } from "lucide-react";
 import { supabase } from "../../utils/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import ConfirmationDialog from "../components/erp/ConfirmationDialog";
+import TablePagination from "../components/erp/TablePagination";
+import {
+  DEFAULT_PAGE_SIZE,
+  paginateRows,
+} from "../lib/erp";
 
 interface BranchRow {
   id: string;
@@ -109,9 +115,15 @@ export default function BranchesPage() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
   >("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBranch, setEditingBranch] =
+    useState<BranchRow | null>(null);
+  const [branchToDelete, setBranchToDelete] =
+    useState<BranchRow | null>(null);
+  const [branchToToggle, setBranchToToggle] =
     useState<BranchRow | null>(null);
   const [form, setForm] = useState<BranchFormState>(emptyForm);
 
@@ -215,6 +227,10 @@ export default function BranchesPage() {
     void loadPageData();
   }, [loadPageData]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter]);
+
   const filteredBranches = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
@@ -255,6 +271,11 @@ export default function BranchesPage() {
       inactive: branches.filter((branch) => !branch.is_active).length,
     };
   }, [branches]);
+
+  const paginatedBranches = useMemo(
+    () => paginateRows(filteredBranches, page, pageSize),
+    [filteredBranches, page, pageSize],
+  );
 
   function openCreateForm() {
     setEditingBranch(null);
@@ -415,6 +436,7 @@ export default function BranchesPage() {
           : "تم تفعيل الفرع.",
       );
 
+      setBranchToToggle(null);
       await loadBranches();
     } catch (error) {
       console.error("Failed to toggle branch:", error);
@@ -434,14 +456,6 @@ export default function BranchesPage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `هل أنت متأكد من حذف فرع "${branch.name}"؟\n\nيفضل إيقاف الفرع بدل حذفه إذا كانت له بيانات مرتبطة.`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setDeletingId(branch.id);
     setErrorMessage("");
 
@@ -456,6 +470,7 @@ export default function BranchesPage() {
       }
 
       showSuccess("تم حذف الفرع بنجاح.");
+      setBranchToDelete(null);
       await loadBranches();
     } catch (error) {
       console.error("Failed to delete branch:", error);
@@ -620,155 +635,258 @@ export default function BranchesPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] text-right">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold text-gray-500">
-                  <th className="px-5 py-4">الفرع</th>
-                  <th className="px-5 py-4">الموقع</th>
-                  <th className="px-5 py-4">التواصل</th>
-                  <th className="px-5 py-4">مدير الفرع</th>
-                  <th className="px-5 py-4">الحالة</th>
-                  <th className="px-5 py-4">الإجراءات</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredBranches.map((branch) => (
-                  <tr
-                    key={branch.id}
-                    className="border-b border-gray-100 text-sm last:border-b-0 hover:bg-gray-50/70"
-                  >
-                    <td className="px-5 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
-                          <Building2 size={21} />
-                        </div>
-
-                        <div>
-                          <strong className="block text-gray-950">
-                            {branch.name}
-                          </strong>
-
-                          <span className="mt-1 block text-xs text-gray-500">
-                            {branch.code}
-                          </span>
-                        </div>
+          <>
+            <div className="grid gap-3 p-4 md:hidden">
+              {paginatedBranches.rows.map((branch) => (
+                <article
+                  key={branch.id}
+                  className="rounded-2xl border border-gray-200 p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
+                        <Building2 size={21} />
                       </div>
-                    </td>
 
-                    <td className="px-5 py-5">
-                      <div className="flex items-start gap-2">
-                        <MapPin
-                          className="mt-0.5 shrink-0 text-gray-400"
-                          size={17}
-                        />
-
-                        <div>
-                          <span className="block text-gray-800">
-                            {[branch.governorate, branch.wilaya]
-                              .filter(Boolean)
-                              .join(" - ") || "غير محدد"}
-                          </span>
-
-                          {branch.address && (
-                            <span className="mt-1 block max-w-[260px] text-xs text-gray-500">
-                              {branch.address}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-5">
-                      {branch.phone ? (
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Phone size={16} />
-                          <span dir="ltr">{branch.phone}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">
-                          غير محدد
+                      <div>
+                        <strong className="block text-gray-950">
+                          {branch.name}
+                        </strong>
+                        <span className="mt-1 block text-xs text-gray-500">
+                          {branch.code}
                         </span>
-                      )}
-                    </td>
-
-                    <td className="px-5 py-5 text-gray-700">
-                      {getManagerName(
-                        branch.manager_id,
-                        managers,
-                      )}
-                    </td>
-
-                    <td className="px-5 py-5">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1.5 text-xs font-semibold ${
-                          branch.is_active
-                            ? "bg-green-50 text-green-700"
-                            : "bg-red-50 text-red-700"
-                        }`}
-                      >
-                        {branch.is_active ? "نشط" : "متوقف"}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-5">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          title="تعديل"
-                          onClick={() => openEditForm(branch)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-                        >
-                          <Edit3 size={17} />
-                        </button>
-
-                        <button
-                          type="button"
-                          title={
-                            branch.is_active
-                              ? "إيقاف الفرع"
-                              : "تفعيل الفرع"
-                          }
-                          disabled={togglingId === branch.id}
-                          onClick={() =>
-                            void toggleBranchStatus(branch)
-                          }
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50"
-                        >
-                          {togglingId === branch.id ? (
-                            <LoaderCircle
-                              className="animate-spin"
-                              size={17}
-                            />
-                          ) : (
-                            <Power size={17} />
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          title="حذف الفرع"
-                          disabled={deletingId === branch.id}
-                          onClick={() => void deleteBranch(branch)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
-                        >
-                          {deletingId === branch.id ? (
-                            <LoaderCircle
-                              className="animate-spin"
-                              size={17}
-                            />
-                          ) : (
-                            <Trash2 size={17} />
-                          )}
-                        </button>
                       </div>
-                    </td>
+                    </div>
+
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        branch.is_active
+                          ? "bg-green-50 text-green-700"
+                          : "bg-red-50 text-red-700"
+                      }`}
+                    >
+                      {branch.is_active ? "نشط" : "متوقف"}
+                    </span>
+                  </div>
+
+                  <dl className="mt-4 space-y-2 text-sm text-gray-600">
+                    <div className="flex justify-between gap-3">
+                      <dt>الموقع</dt>
+                      <dd className="text-left font-medium text-gray-900">
+                        {[branch.governorate, branch.wilaya]
+                          .filter(Boolean)
+                          .join(" - ") || "غير محدد"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt>مدير الفرع</dt>
+                      <dd className="text-left font-medium text-gray-900">
+                        {getManagerName(
+                          branch.manager_id,
+                          managers,
+                        )}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt>الهاتف</dt>
+                      <dd className="text-left font-medium text-gray-900">
+                        {branch.phone || "غير محدد"}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(branch)}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      <Edit3 size={14} />
+                      تعديل
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBranchToToggle(branch)}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50"
+                    >
+                      <Power size={14} />
+                      {branch.is_active ? "إيقاف" : "تفعيل"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBranchToDelete(branch)}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={14} />
+                      حذف
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[1050px] text-right">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold text-gray-500">
+                    <th className="px-5 py-4">الفرع</th>
+                    <th className="px-5 py-4">الموقع</th>
+                    <th className="px-5 py-4">التواصل</th>
+                    <th className="px-5 py-4">مدير الفرع</th>
+                    <th className="px-5 py-4">الحالة</th>
+                    <th className="px-5 py-4">الإجراءات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedBranches.rows.map((branch) => (
+                    <tr
+                      key={branch.id}
+                      className="border-b border-gray-100 text-sm last:border-b-0 hover:bg-gray-50/70"
+                    >
+                      <td className="px-5 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
+                            <Building2 size={21} />
+                          </div>
+
+                          <div>
+                            <strong className="block text-gray-950">
+                              {branch.name}
+                            </strong>
+
+                            <span className="mt-1 block text-xs text-gray-500">
+                              {branch.code}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-5">
+                        <div className="flex items-start gap-2">
+                          <MapPin
+                            className="mt-0.5 shrink-0 text-gray-400"
+                            size={17}
+                          />
+
+                          <div>
+                            <span className="block text-gray-800">
+                              {[branch.governorate, branch.wilaya]
+                                .filter(Boolean)
+                                .join(" - ") || "غير محدد"}
+                            </span>
+
+                            {branch.address && (
+                              <span className="mt-1 block max-w-[260px] text-xs text-gray-500">
+                                {branch.address}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-5">
+                        {branch.phone ? (
+                          <div className="flex items-center gap-2 text-gray-700">
+                            <Phone size={16} />
+                            <span dir="ltr">{branch.phone}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">
+                            غير محدد
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-5 text-gray-700">
+                        {getManagerName(
+                          branch.manager_id,
+                          managers,
+                        )}
+                      </td>
+
+                      <td className="px-5 py-5">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1.5 text-xs font-semibold ${
+                            branch.is_active
+                              ? "bg-green-50 text-green-700"
+                              : "bg-red-50 text-red-700"
+                          }`}
+                        >
+                          {branch.is_active ? "نشط" : "متوقف"}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            title="تعديل"
+                            onClick={() => openEditForm(branch)}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                          >
+                            <Edit3 size={17} />
+                          </button>
+
+                          <button
+                            type="button"
+                            title={
+                              branch.is_active
+                                ? "إيقاف الفرع"
+                                : "تفعيل الفرع"
+                            }
+                            disabled={togglingId === branch.id}
+                            onClick={() =>
+                              setBranchToToggle(branch)
+                            }
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50"
+                          >
+                            {togglingId === branch.id ? (
+                              <LoaderCircle
+                                className="animate-spin"
+                                size={17}
+                              />
+                            ) : (
+                              <Power size={17} />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            title="حذف الفرع"
+                            disabled={deletingId === branch.id}
+                            onClick={() => setBranchToDelete(branch)}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                          >
+                            {deletingId === branch.id ? (
+                              <LoaderCircle
+                                className="animate-spin"
+                                size={17}
+                              />
+                            ) : (
+                              <Trash2 size={17} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <TablePagination
+              page={paginatedBranches.page}
+              pageSize={pageSize}
+              totalItems={filteredBranches.length}
+              totalPages={paginatedBranches.totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
+          </>
         )}
       </div>
 
@@ -1070,6 +1188,63 @@ export default function BranchesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmationDialog
+        open={Boolean(branchToToggle)}
+        title={
+          branchToToggle?.is_active
+            ? "إيقاف الفرع"
+            : "تفعيل الفرع"
+        }
+        description={
+          branchToToggle
+            ? `هل تريد ${
+                branchToToggle.is_active
+                  ? "إيقاف"
+                  : "تفعيل"
+              } فرع "${branchToToggle.name}"؟`
+            : ""
+        }
+        confirmLabel={
+          togglingId ? "جاري التنفيذ..." : "تأكيد"
+        }
+        busy={Boolean(togglingId)}
+        onConfirm={() => {
+          if (branchToToggle) {
+            void toggleBranchStatus(branchToToggle);
+          }
+        }}
+        onOpenChange={(open) => {
+          if (!open && !togglingId) {
+            setBranchToToggle(null);
+          }
+        }}
+      />
+
+      <ConfirmationDialog
+        open={Boolean(branchToDelete)}
+        title="حذف الفرع"
+        description={
+          branchToDelete
+            ? `هل أنت متأكد من حذف فرع "${branchToDelete.name}"؟ يفضل إيقاف الفرع بدل حذفه إذا كانت له بيانات مرتبطة.`
+            : ""
+        }
+        confirmLabel={
+          deletingId ? "جاري الحذف..." : "حذف"
+        }
+        destructive
+        busy={Boolean(deletingId)}
+        onConfirm={() => {
+          if (branchToDelete) {
+            void deleteBranch(branchToDelete);
+          }
+        }}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) {
+            setBranchToDelete(null);
+          }
+        }}
+      />
     </section>
   );
 }
