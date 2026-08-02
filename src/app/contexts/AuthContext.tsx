@@ -107,21 +107,37 @@ async function getUserProfile(
     );
   }
 
+  if (!data) {
+    return {
+      id: user.id,
+      email: user.email || "",
+      fullName:
+        user.user_metadata?.full_name ||
+        user.email?.split("@")[0] ||
+        "مستخدم",
+      phone: null,
+      role: normalizeRole(user.user_metadata?.role),
+      branchId: null,
+      avatarUrl: null,
+      isActive: false,
+    };
+  }
+
   return {
     id: user.id,
-    email: data?.email || user.email || "",
+    email: data.email || user.email || "",
     fullName:
-      data?.full_name ||
+      data.full_name ||
       user.user_metadata?.full_name ||
       user.email?.split("@")[0] ||
       "مستخدم",
-    phone: data?.phone || null,
+    phone: data.phone || null,
     role: normalizeRole(
-      data?.role || user.user_metadata?.role,
+      data.role || user.user_metadata?.role,
     ),
-    branchId: data?.branch_id || null,
-    avatarUrl: data?.avatar_url || null,
-    isActive: data?.is_active ?? true,
+    branchId: data.branch_id || null,
+    avatarUrl: data.avatar_url || null,
+    isActive: data.is_active ?? true,
   };
 }
 

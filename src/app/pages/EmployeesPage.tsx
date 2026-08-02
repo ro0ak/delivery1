@@ -7,6 +7,7 @@ import {
   Plus,
   Save,
   Search,
+  Trash2,
   UserCog,
   Users,
   X,
@@ -18,7 +19,14 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import ConfirmationDialog from "../components/erp/ConfirmationDialog";
+import TablePagination from "../components/erp/TablePagination";
 import { useAuth, type UserRole } from "../contexts/AuthContext";
+import {
+  DEFAULT_PAGE_SIZE,
+  matchesSearch,
+  paginateRows,
+} from "../lib/erp";
 import { supabase } from "../../utils/supabase";
 
 interface BranchOption {
@@ -46,16 +54,12 @@ interface EmployeeFormState {
   isActive: boolean;
 }
 
-const roleOptions: {
-  value: UserRole;
-  label: string;
-}[] = [
-  { value: "super_admin", label: "Super Admin" },
+const roleOptions: { value: UserRole; label: string }[] = [
   { value: "branch_manager", label: "Branch Manager" },
   { value: "branch_employee", label: "Branch Employee" },
   { value: "operations", label: "Operations" },
-  { value: "driver", label: "Driver" },
   { value: "accountant", label: "Accountant" },
+  { value: "super_admin", label: "Super Admin" },
 ];
 
 const roleLabels: Record<UserRole, string> = {
@@ -77,28 +81,45 @@ const emptyForm: EmployeeFormState = {
 };
 
 function normalizeRole(value: string): UserRole {
-  const isKnown = roleOptions.some((option) => option.value === value);
-  return isKnown ? (value as UserRole) : "branch_employee";
+  const allowedRoles = roleOptions.map((option) => option.value);
+  return allowedRoles.includes(value as UserRole)
+    ? (value as UserRole)
+    : "branch_employee";
 }
 
 export default function EmployeesPage() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeRow | null>(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeRow | null>(null);
   const [form, setForm] = useState<EmployeeFormState>(emptyForm);
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  const availableRoleOptions = useMemo(() => {
+    if (profile?.role === "super_admin") {
+      return roleOptions;
+    }
+
+    return roleOptions.filter((option) =>
+      ["branch_employee", "operations", "accountant"].includes(option.value),
+    );
+  }, [profile?.role]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -123,13 +144,17 @@ export default function EmployeesPage() {
       }
 
       setBranches((branchesResponse.data || []) as BranchOption[]);
-
-      const rows = (employeesResponse.data || []).map((row) => ({
-        ...(row as Omit<EmployeeRow, "role">),
-        role: normalizeRole(String((row as { role: string }).role || "branch_employee")),
-      }));
-
-      setEmployees(rows);
+      setEmployees(
+        (employeesResponse.data || []).map((row) => ({
+          id: String(row.id),
+          full_name: String((row as { full_name?: unknown }).full_name || "Unnamed Employee"),
+          email: String((row as { email?: unknown }).email || ""),
+          phone: ((row as { phone?: string | null }).phone || null) as string | null,
+          role: normalizeRole(String((row as { role?: unknown }).role || "branch_employee")),
+          branch_id: ((row as { branch_id?: string | null }).branch_id || null) as string | null,
+          is_active: Boolean((row as { is_active?: unknown }).is_active),
+        })),
+      );
     } catch (error) {
       console.error("Failed to load employees page:", error);
       setErrorMessage(
@@ -147,41 +172,53 @@ export default function EmployeesPage() {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [branchFilter, searchQuery, statusFilter]);
+
+  const branchMap = useMemo(() => new Map(branches.map((branch) => [branch.id, branch.name])), [branches]);
+
   const visibleEmployees = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
     return employees.filter((employee) => {
-      const managerScopeDenied =
-        profile?.role === "branch_manager" && profile.branchId && employee.branch_id !== profile.branchId;
-
-      if (managerScopeDenied) {
-        return false;
-      }
-
       if (branchFilter !== "all" && employee.branch_id !== branchFilter) {
         return false;
       }
 
-      if (!normalizedQuery) {
-        return true;
+      if (statusFilter === "active" && !employee.is_active) {
+        return false;
       }
 
-      return [employee.full_name, employee.email, employee.phone]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalizedQuery));
-    });
-  }, [branchFilter, employees, profile?.branchId, profile?.role, searchQuery]);
+      if (statusFilter === "inactive" && employee.is_active) {
+        return false;
+      }
 
-  const branchMap = useMemo(() => {
-    return new Map(branches.map((branch) => [branch.id, branch.name]));
-  }, [branches]);
+      return matchesSearch([employee.full_name, employee.email, employee.phone], searchQuery);
+    });
+  }, [branchFilter, employees, searchQuery, statusFilter]);
+
+  const paginated = useMemo(
+    () => paginateRows(visibleEmployees, page, pageSize),
+    [page, pageSize, visibleEmployees],
+  );
+
+  const statistics = useMemo(
+    () => ({
+      total: visibleEmployees.length,
+      managers: visibleEmployees.filter((employee) => employee.role === "branch_manager").length,
+      active: visibleEmployees.filter((employee) => employee.is_active).length,
+    }),
+    [visibleEmployees],
+  );
 
   function openCreateForm() {
     setEditingEmployee(null);
     setForm({
       ...emptyForm,
+      role: availableRoleOptions[0]?.value || "branch_employee",
       branchId: profile?.role === "branch_manager" ? profile.branchId || "" : "",
     });
+    setErrorMessage("");
+    setSuccessMessage("");
     setFormOpen(true);
   }
 
@@ -195,6 +232,8 @@ export default function EmployeesPage() {
       branchId: employee.branch_id || "",
       isActive: employee.is_active,
     });
+    setErrorMessage("");
+    setSuccessMessage("");
     setFormOpen(true);
   }
 
@@ -223,17 +262,14 @@ export default function EmployeesPage() {
       return;
     }
 
-    if (
-      profile?.role === "branch_manager" &&
-      profile.branchId &&
-      form.branchId !== profile.branchId
-    ) {
+    if (profile?.role === "branch_manager" && profile.branchId && form.branchId !== profile.branchId) {
       setErrorMessage("Branch managers can only assign employees to their own branch.");
       return;
     }
 
     setSaving(true);
     setErrorMessage("");
+    setSuccessMessage("");
 
     try {
       const payload = {
@@ -252,37 +288,36 @@ export default function EmployeesPage() {
           throw error;
         }
 
-        setEmployees((current) =>
-          current.map((employee) =>
-            employee.id === editingEmployee.id
-              ? {
-                  ...employee,
-                  ...payload,
-                  full_name: payload.full_name,
-                  phone: payload.phone,
-                  branch_id: payload.branch_id,
-                }
-              : employee,
-          ),
-        );
-
         setSuccessMessage("Employee updated successfully.");
       } else {
-        const localEmployee: EmployeeRow = {
-          id: `local-${Date.now()}`,
-          full_name: payload.full_name,
-          email: payload.email,
-          phone: payload.phone,
-          role: payload.role,
-          branch_id: payload.branch_id,
-          is_active: payload.is_active,
-        };
+        const { data: existingProfile, error: existingProfileError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
 
-        setEmployees((current) => [localEmployee, ...current]);
-        setSuccessMessage("Employee added locally. Connect invite flow to persist in auth users.");
+        if (existingProfileError) {
+          throw existingProfileError;
+        }
+
+        if (!existingProfile?.id) {
+          throw new Error(
+            "No Supabase profile was found for this email. Invite or create the auth user first, then save the employee record.",
+          );
+        }
+
+        const { error } = await supabase.from("profiles").update(payload).eq("id", existingProfile.id);
+
+        if (error) {
+          throw error;
+        }
+
+        setSuccessMessage("Employee linked to the existing Supabase user successfully.");
       }
 
       closeForm();
+      await loadData();
+      await refreshProfile();
     } catch (error) {
       console.error("Failed to save employee:", error);
       setErrorMessage(
@@ -293,24 +328,54 @@ export default function EmployeesPage() {
     }
   }
 
+  async function confirmDeleteEmployee() {
+    if (!employeeToDelete || deletingId) {
+      return;
+    }
+
+    setDeletingId(employeeToDelete.id);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const { error } = await supabase.from("profiles").delete().eq("id", employeeToDelete.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setEmployees((current) => current.filter((employee) => employee.id !== employeeToDelete.id));
+      setSuccessMessage("Employee deleted successfully.");
+      setEmployeeToDelete(null);
+      await refreshProfile();
+    } catch (error) {
+      console.error("Failed to delete employee:", error);
+      setErrorMessage(
+        error instanceof Error ? `Failed to delete employee: ${error.message}` : "Failed to delete employee.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <section className="space-y-6" dir="ltr">
       <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
               Team Management
             </span>
             <h1 className="mt-3 text-2xl font-bold text-gray-950">Employees Management</h1>
             <p className="mt-2 text-sm text-gray-500">
-              Manage staff records, role assignment, and branch ownership.
+              Manage live employee profiles, branch assignments, status, and permissions.
             </p>
           </div>
 
           <button
             type="button"
             onClick={openCreateForm}
-            className="inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
           >
             <Plus size={18} />
             Add Employee
@@ -337,8 +402,8 @@ export default function EmployeesPage() {
           <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
             <Users size={19} />
           </div>
-          <p className="text-sm text-gray-500">Total Staff</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{visibleEmployees.length}</p>
+          <p className="text-sm text-gray-500">Visible Staff</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{statistics.total}</p>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -346,9 +411,7 @@ export default function EmployeesPage() {
             <Briefcase size={19} />
           </div>
           <p className="text-sm text-gray-500">Branch Managers</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
-            {visibleEmployees.filter((employee) => employee.role === "branch_manager").length}
-          </p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{statistics.managers}</p>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -356,15 +419,13 @@ export default function EmployeesPage() {
             <UserCog size={19} />
           </div>
           <p className="text-sm text-gray-500">Active Employees</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
-            {visibleEmployees.filter((employee) => employee.is_active).length}
-          </p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{statistics.active}</p>
         </div>
       </div>
 
       <div className="rounded-3xl border border-gray-200 bg-white shadow-sm">
-        <div className="grid gap-3 border-b border-gray-100 p-5 md:grid-cols-[1fr_220px]">
-          <label className="relative block">
+        <div className="grid gap-3 border-b border-gray-100 p-5 md:grid-cols-2 xl:grid-cols-4">
+          <label className="relative block xl:col-span-2">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={17} />
             <input
               type="search"
@@ -388,6 +449,16 @@ export default function EmployeesPage() {
               </option>
             ))}
           </select>
+
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "inactive")}
+            className="h-11 rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
+          >
+            <option value="all">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
 
         {loading ? (
@@ -395,53 +466,139 @@ export default function EmployeesPage() {
             <LoaderCircle className="animate-spin" size={18} />
             Loading employees...
           </div>
+        ) : visibleEmployees.length === 0 ? (
+          <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 px-6 text-center">
+            <Users className="text-gray-300" size={36} />
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">No employees found</h2>
+              <p className="mt-1 text-sm text-gray-500">Try changing the filters or link a new Supabase user.</p>
+            </div>
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                  <th className="px-5 py-3">Employee</th>
-                  <th className="px-5 py-3">Role</th>
-                  <th className="px-5 py-3">Branch</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleEmployees.map((employee) => (
-                  <tr key={employee.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/80">
-                    <td className="px-5 py-4">
+          <>
+            <div className="grid gap-3 p-4 md:hidden">
+              {paginated.rows.map((employee) => (
+                <article key={employee.id} className="rounded-2xl border border-gray-200 p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
                       <p className="font-semibold text-gray-900">{employee.full_name}</p>
                       <p className="text-xs text-gray-500">{employee.email}</p>
-                    </td>
-                    <td className="px-5 py-4 text-gray-700">{roleLabels[employee.role]}</td>
-                    <td className="px-5 py-4 text-gray-700">
-                      {employee.branch_id ? branchMap.get(employee.branch_id) || "Unknown" : "Unassigned"}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          employee.is_active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {employee.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <button
-                        type="button"
-                        onClick={() => openEditForm(employee)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                      >
-                        <Pencil size={14} />
-                        Edit
-                      </button>
-                    </td>
+                    </div>
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        employee.is_active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {employee.is_active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                  <dl className="mt-3 space-y-2 text-sm text-gray-600">
+                    <div className="flex justify-between gap-3">
+                      <dt>Role</dt>
+                      <dd className="font-medium text-gray-900">{roleLabels[employee.role]}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt>Branch</dt>
+                      <dd className="font-medium text-gray-900">
+                        {employee.branch_id ? branchMap.get(employee.branch_id) || "Unknown" : "Unassigned"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt>Phone</dt>
+                      <dd className="font-medium text-gray-900">{employee.phone || "—"}</dd>
+                    </div>
+                  </dl>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(employee)}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      <Pencil size={14} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEmployeeToDelete(employee)}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={14} /> Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[860px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                    <th className="px-5 py-3">Employee</th>
+                    <th className="px-5 py-3">Role</th>
+                    <th className="px-5 py-3">Branch</th>
+                    <th className="px-5 py-3">Phone</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {paginated.rows.map((employee) => (
+                    <tr key={employee.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/80">
+                      <td className="px-5 py-4">
+                        <p className="font-semibold text-gray-900">{employee.full_name}</p>
+                        <p className="text-xs text-gray-500">{employee.email}</p>
+                      </td>
+                      <td className="px-5 py-4 text-gray-700">{roleLabels[employee.role]}</td>
+                      <td className="px-5 py-4 text-gray-700">
+                        {employee.branch_id ? branchMap.get(employee.branch_id) || "Unknown" : "Unassigned"}
+                      </td>
+                      <td className="px-5 py-4 text-gray-700">{employee.phone || "—"}</td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                            employee.is_active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {employee.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditForm(employee)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          >
+                            <Pencil size={14} />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEmployeeToDelete(employee)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <TablePagination
+              page={paginated.page}
+              pageSize={pageSize}
+              totalItems={visibleEmployees.length}
+              totalPages={paginated.totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
+          </>
         )}
       </div>
 
@@ -457,7 +614,7 @@ export default function EmployeesPage() {
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">
-                {editingEmployee ? "Edit Employee" : "Add Employee"}
+                {editingEmployee ? "Edit Employee" : "Link Employee to Supabase User"}
               </h2>
               <button
                 type="button"
@@ -468,6 +625,12 @@ export default function EmployeesPage() {
               </button>
             </div>
 
+            {!editingEmployee && (
+              <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                New employees must already have a Supabase auth/profile record for the entered email.
+              </p>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-1.5">
@@ -475,12 +638,7 @@ export default function EmployeesPage() {
                   <input
                     type="text"
                     value={form.fullName}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        fullName: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
                     required
                   />
@@ -491,14 +649,10 @@ export default function EmployeesPage() {
                   <input
                     type="email"
                     value={form.email}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        email: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
                     required
+                    disabled={Boolean(editingEmployee)}
                   />
                 </label>
 
@@ -507,12 +661,7 @@ export default function EmployeesPage() {
                   <input
                     type="tel"
                     value={form.phone}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        phone: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
                   />
                 </label>
@@ -521,15 +670,10 @@ export default function EmployeesPage() {
                   <span className="text-sm font-medium text-gray-700">Role</span>
                   <select
                     value={form.role}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        role: normalizeRole(event.target.value),
-                      }))
-                    }
+                    onChange={(event) => setForm((current) => ({ ...current, role: normalizeRole(event.target.value) }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
                   >
-                    {roleOptions.map((option) => (
+                    {availableRoleOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -541,12 +685,7 @@ export default function EmployeesPage() {
                   <span className="text-sm font-medium text-gray-700">Branch</span>
                   <select
                     value={form.branchId}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        branchId: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => setForm((current) => ({ ...current, branchId: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
                     disabled={profile?.role === "branch_manager"}
                   >
@@ -564,12 +703,7 @@ export default function EmployeesPage() {
                 <input
                   type="checkbox"
                   checked={form.isActive}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      isActive: event.target.checked,
-                    }))
-                  }
+                  onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
                   className="h-4 w-4 rounded border-gray-300"
                 />
                 Employee is active
@@ -596,6 +730,21 @@ export default function EmployeesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmationDialog
+        open={Boolean(employeeToDelete)}
+        title="Delete employee"
+        description={`Delete ${employeeToDelete?.full_name || "this employee"} from Supabase profiles?`}
+        confirmLabel={deletingId ? "Deleting..." : "Delete"}
+        destructive
+        busy={Boolean(deletingId)}
+        onConfirm={() => void confirmDeleteEmployee()}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) {
+            setEmployeeToDelete(null);
+          }
+        }}
+      />
     </section>
   );
 }
