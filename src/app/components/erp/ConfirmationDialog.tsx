@@ -25,8 +25,8 @@ export default function ConfirmationDialog({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel = "تأكيد",
+  cancelLabel = "إلغاء",
   destructive = false,
   busy = false,
   onConfirm,
@@ -34,7 +34,10 @@ export default function ConfirmationDialog({
 }: ConfirmationDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent dir="ltr" className="rounded-2xl border-gray-200">
+      <AlertDialogContent
+        dir="rtl"
+        className="rounded-2xl border-gray-200"
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
