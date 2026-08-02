@@ -1,12 +1,15 @@
 import {
+  AlertCircle,
   CalendarRange,
   CircleDollarSign,
   Filter,
   HandCoins,
+  LoaderCircle,
   ReceiptText,
+  RefreshCw,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "../../utils/supabase";
 
 type CollectionStatus = "pending" | "verified" | "settled";
 type CollectionSource = "driver" | "merchant";
@@ -39,54 +42,73 @@ const sourceLabel: Record<CollectionSource, string> = {
   merchant: "Merchant",
 };
 
-const initialCollections: CollectionRow[] = [
-  {
-    id: "COL-001",
-    branchId: "muscat",
-    branchName: "Muscat Branch",
-    source: "driver",
-    sourceName: "Ahmed Salim",
-    amount: 184.5,
-    date: "2026-08-01",
-    status: "pending",
-  },
-  {
-    id: "COL-002",
-    branchId: "muscat",
-    branchName: "Muscat Branch",
-    source: "merchant",
-    sourceName: "Nizwa Electronics",
-    amount: 320,
-    date: "2026-08-01",
-    status: "verified",
-  },
-  {
-    id: "COL-003",
-    branchId: "sohar",
-    branchName: "Sohar Branch",
-    source: "driver",
-    sourceName: "Saif Al Balushi",
-    amount: 96,
-    date: "2026-07-31",
-    status: "settled",
-  },
-];
+function isValidStatus(value: unknown): value is CollectionStatus {
+  return value === "pending" || value === "verified" || value === "settled";
+}
+
+function isValidSource(value: unknown): value is CollectionSource {
+  return value === "driver" || value === "merchant";
+}
 
 export default function CollectionsPage() {
-  const { profile } = useAuth();
+  // Branch scoping is enforced at the Supabase RLS level — no client-side filter needed.
 
-  const [rows] = useState<CollectionRow[]>(initialCollections);
+  const [rows, setRows] = useState<CollectionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
   const [statusFilter, setStatusFilter] = useState<CollectionStatus | "all">("all");
   const [sourceFilter, setSourceFilter] = useState<CollectionSource | "all">("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  const visibleCollections = useMemo(() => {
-    return rows.filter((row) => {
-      if (profile?.role === "branch_manager" && profile.branchId && row.branchId !== profile.branchId) {
-        return false;
+  const loadCollections = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      const query = supabase
+        .from("collections")
+        .select("id, branch_id, source, source_name, amount, date, status, branches(name)")
+        .order("date", { ascending: false });
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
       }
 
+      const mapped: CollectionRow[] = (data || []).map((row) => ({
+        id: String(row.id),
+        branchId: String((row as { branch_id?: unknown }).branch_id || ""),
+        branchName: String(
+          ((row as { branches?: { name?: unknown } | null }).branches?.name) || "Unknown Branch",
+        ),
+        source: isValidSource(row.source) ? row.source : "driver",
+        sourceName: String((row as { source_name?: unknown }).source_name || ""),
+        amount: Number((row as { amount?: unknown }).amount || 0),
+        date: String((row as { date?: unknown }).date || ""),
+        status: isValidStatus(row.status) ? row.status : "pending",
+      }));
+
+      setRows(mapped);
+    } catch (error) {
+      console.error("Failed to load collections:", error);
+      setErrorMessage(
+        error instanceof Error ? `Failed to load collections: ${error.message}` : "Failed to load collections.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.title = "Collections | ROCK Delivery";
+    void loadCollections();
+  }, [loadCollections]);
+
+  const visibleCollections = useMemo(() => {
+    return rows.filter((row) => {
       if (statusFilter !== "all" && row.status !== statusFilter) {
         return false;
       }
@@ -105,7 +127,7 @@ export default function CollectionsPage() {
 
       return true;
     });
-  }, [dateFrom, dateTo, profile?.branchId, profile?.role, rows, sourceFilter, statusFilter]);
+  }, [dateFrom, dateTo, rows, sourceFilter, statusFilter]);
 
   const totals = useMemo(() => {
     return {
@@ -122,15 +144,36 @@ export default function CollectionsPage() {
   return (
     <section className="space-y-6" dir="ltr">
       <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-          Finance
-        </span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              Finance
+            </span>
 
-        <h1 className="mt-3 text-2xl font-bold text-gray-950">Collections</h1>
-        <p className="mt-2 text-sm text-gray-500">
-          Track cash collections from drivers and merchants with status and date filters.
-        </p>
+            <h1 className="mt-3 text-2xl font-bold text-gray-950">Collections</h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Track cash collections from drivers and merchants with status and date filters.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void loadCollections()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+          >
+            {loading ? <LoaderCircle className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {errorMessage && (
+        <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <AlertCircle className="mt-0.5 shrink-0" size={18} />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -218,36 +261,51 @@ export default function CollectionsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                <th className="px-5 py-3">Reference</th>
-                <th className="px-5 py-3">Branch</th>
-                <th className="px-5 py-3">Source</th>
-                <th className="px-5 py-3">Date</th>
-                <th className="px-5 py-3">Amount</th>
-                <th className="px-5 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleCollections.map((row) => (
-                <tr key={row.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70">
-                  <td className="px-5 py-4 font-semibold text-gray-900">{row.id}</td>
-                  <td className="px-5 py-4 text-gray-700">{row.branchName}</td>
-                  <td className="px-5 py-4 text-gray-700">
-                    {sourceLabel[row.source]} - {row.sourceName}
-                  </td>
-                  <td className="px-5 py-4 text-gray-700">{row.date}</td>
-                  <td className="px-5 py-4 font-semibold text-gray-900">{row.amount.toFixed(3)} OMR</td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClasses[row.status]}`}>
-                      {statusLabel[row.status]}
-                    </span>
-                  </td>
+          {loading ? (
+            <div className="flex min-h-[220px] items-center justify-center gap-2 text-sm text-gray-500">
+              <LoaderCircle className="animate-spin" size={18} />
+              Loading collections...
+            </div>
+          ) : (
+            <table className="w-full min-w-[860px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                  <th className="px-5 py-3">Reference</th>
+                  <th className="px-5 py-3">Branch</th>
+                  <th className="px-5 py-3">Source</th>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Amount</th>
+                  <th className="px-5 py-3">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visibleCollections.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400">
+                      No collections found.
+                    </td>
+                  </tr>
+                ) : (
+                  visibleCollections.map((row) => (
+                    <tr key={row.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70">
+                      <td className="px-5 py-4 font-mono text-xs font-semibold text-gray-900">{row.id.slice(0, 8)}…</td>
+                      <td className="px-5 py-4 text-gray-700">{row.branchName}</td>
+                      <td className="px-5 py-4 text-gray-700">
+                        {sourceLabel[row.source]} — {row.sourceName}
+                      </td>
+                      <td className="px-5 py-4 text-gray-700">{row.date}</td>
+                      <td className="px-5 py-4 font-semibold text-gray-900">{row.amount.toFixed(3)} OMR</td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClasses[row.status]}`}>
+                          {statusLabel[row.status]}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </section>

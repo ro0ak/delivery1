@@ -64,14 +64,14 @@ export default function DriversPage() {
         const [driversResponse, branchesResponse, shipmentsResponse] = await Promise.all([
           supabase
             .from("profiles")
-            .select("id,full_name,phone,branch_id,is_active")
+            .select("id,full_name,phone,vehicle_number,branch_id,is_active")
             .eq("role", "driver")
             .order("full_name", { ascending: true }),
           supabase.from("branches").select("id,name"),
           supabase
             .from("shipments")
-            .select("driver_id,status")
-            .in("status", ["assigned", "on_delivery", "out_for_delivery"]),
+            .select("driver_id,current_status_code")
+            .in("current_status_code", ["assigned", "on_delivery", "out_for_delivery"]),
         ]);
 
         if (driversResponse.error) {
@@ -111,7 +111,7 @@ export default function DriversPage() {
             id: String((driver as { id: string }).id),
             full_name: String((driver as { full_name?: string }).full_name || "Unnamed Driver"),
             phone: ((driver as { phone?: string | null }).phone || null) as string | null,
-            vehicle_number: null,
+          vehicle_number: ((driver as { vehicle_number?: string | null }).vehicle_number || null) as string | null,
             branch_id: ((driver as { branch_id?: string | null }).branch_id || null) as string | null,
             status,
             active_shipments: activeShipments,

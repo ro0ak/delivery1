@@ -6,13 +6,53 @@ import {
 
 import {
   Box,
+  CheckCircle2,
   Clock3,
+  LoaderCircle,
   MapPin,
   PackageSearch,
   Search,
   ShieldCheck,
   Truck,
+  XCircle,
 } from "lucide-react";
+
+import { supabase } from "../../../utils/supabase";
+
+interface TrackingResult {
+  tracking_number: string;
+  current_status_code: string;
+  service_type: string | null;
+  recipient_governorate: string | null;
+  item_description: string | null;
+  pieces_count: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const statusLabels: Record<string, string> = {
+  created:              "تم إنشاء الشحنة",
+  received_destination: "تم استلامها في الفرع",
+  in_transit:           "في الطريق",
+  assigned:             "مسندة إلى سائق",
+  on_delivery:          "جارٍ التوصيل",
+  out_for_delivery:     "خرجت للتوصيل",
+  delivered:            "تم التسليم",
+  return_initiated:     "جارٍ الإرجاع",
+  returned:             "تم الإرجاع",
+  cancelled:            "ملغاة",
+};
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString("ar-OM", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 export default function TrackingPage() {
   const [
@@ -21,9 +61,14 @@ export default function TrackingPage() {
   ] = useState("");
 
   const [
-    submittedNumber,
-    setSubmittedNumber,
-  ] = useState("");
+    result,
+    setResult,
+  ] = useState<TrackingResult | null>(null);
+
+  const [
+    searching,
+    setSearching,
+  ] = useState(false);
 
   const [
     errorMessage,
@@ -35,7 +80,7 @@ export default function TrackingPage() {
       "تتبع الشحنة | ROCK Delivery";
   }, []);
 
-  function handleSubmit(
+  async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
@@ -45,20 +90,50 @@ export default function TrackingPage() {
       .toUpperCase()
       .replace(/\s+/g, "");
 
-    setSubmittedNumber("");
+    setResult(null);
     setErrorMessage("");
 
     if (normalizedNumber.length < 5) {
       setErrorMessage(
         "أدخل رقم شحنة صحيحًا.",
       );
-
       return;
     }
 
-    setTrackingNumber(normalizedNumber);
-    setSubmittedNumber(normalizedNumber);
+    setSearching(true);
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "track_shipment",
+        { p_tracking_number: normalizedNumber },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      const rows = data as TrackingResult[] | null;
+
+      if (!rows || rows.length === 0) {
+        setErrorMessage(
+          "لم يتم العثور على شحنة بهذا الرقم. تأكد من الرقم وحاول مجدداً.",
+        );
+        return;
+      }
+
+      setTrackingNumber(normalizedNumber);
+      setResult(rows[0]);
+    } catch (error) {
+      console.error("Tracking lookup failed:", error);
+      setErrorMessage(
+        "تعذر البحث عن الشحنة. حاول مرة أخرى.",
+      );
+    } finally {
+      setSearching(false);
+    }
   }
+
+  const isDelivered = result?.current_status_code === "delivered";
 
   return (
     <main
@@ -113,10 +188,18 @@ export default function TrackingPage() {
             placeholder="ROCK-BRM-SHR-000001"
             aria-label="رقم التتبع"
             autoComplete="off"
+            disabled={searching}
           />
 
-          <button type="submit">
-            تتبع الشحنة
+          <button type="submit" disabled={searching}>
+            {searching ? (
+              <LoaderCircle
+                className="animate-spin"
+                size={18}
+              />
+            ) : (
+              "تتبع الشحنة"
+            )}
           </button>
         </form>
 
@@ -126,25 +209,63 @@ export default function TrackingPage() {
           </p>
         )}
 
-        {submittedNumber && (
+        {result && (
           <article className="customer-result">
-            <Box size={28} />
+            {isDelivered ? (
+              <CheckCircle2 size={28} className="text-emerald-500" />
+            ) : (
+              <Box size={28} />
+            )}
 
             <div>
               <span>رقم الشحنة</span>
 
               <strong dir="ltr">
-                {submittedNumber}
+                {result.tracking_number}
               </strong>
 
-              <p>
-                واجهة البحث جاهزة. عند إنشاء
-                جدول الشحنات وواجهة التتبع
-                الآمنة ستظهر هنا الحالة
-                الفعلية ومراحل حركة الشحنة.
+              <p
+                className={
+                  isDelivered
+                    ? "font-semibold text-emerald-700"
+                    : ""
+                }
+              >
+                {statusLabels[result.current_status_code] ||
+                  result.current_status_code}
+              </p>
+
+              {result.recipient_governorate && (
+                <p className="mt-1 text-sm opacity-70">
+                  <MapPin
+                    size={14}
+                    className="inline-block"
+                  />{" "}
+                  {result.recipient_governorate}
+                </p>
+              )}
+
+              {result.item_description && (
+                <p className="mt-1 text-sm opacity-70">
+                  {result.item_description}
+                  {result.pieces_count && result.pieces_count > 1
+                    ? ` — ${result.pieces_count} قطع`
+                    : ""}
+                </p>
+              )}
+
+              <p className="mt-2 text-xs opacity-50">
+                آخر تحديث: {formatDate(result.updated_at)}
               </p>
             </div>
           </article>
+        )}
+
+        {result && result.current_status_code !== "delivered" && (
+          <p className="mt-2 flex items-center gap-1 text-xs text-gray-400">
+            <XCircle size={13} />
+            لم يتم التسليم بعد
+          </p>
         )}
       </section>
 
