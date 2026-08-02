@@ -27,6 +27,7 @@ import {
   matchesSearch,
   paginateRows,
 } from "../lib/erp";
+import { createStaffUser } from "../lib/staffProvisioning";
 import { supabase } from "../../utils/supabase";
 
 type DriverStatus = "active" | "on_delivery" | "offline";
@@ -47,6 +48,7 @@ interface DriverFormState {
   fullName: string;
   email: string;
   phone: string;
+  temporaryPassword: string;
   vehicleNumber: string;
   branchId: string;
   isActive: boolean;
@@ -61,6 +63,7 @@ const emptyForm: DriverFormState = {
   fullName: "",
   email: "",
   phone: "",
+  temporaryPassword: "",
   vehicleNumber: "",
   branchId: "",
   isActive: true,
@@ -228,6 +231,7 @@ export default function DriversPage() {
       fullName: driver.full_name,
       email: driver.email,
       phone: driver.phone || "",
+      temporaryPassword: "",
       vehicleNumber: driver.vehicle_number || "",
       branchId: driver.branch_id || "",
       isActive: driver.is_active,
@@ -256,9 +260,16 @@ export default function DriversPage() {
 
     const fullName = form.fullName.trim();
     const email = form.email.trim().toLowerCase();
+    const phone = form.phone.trim();
+    const temporaryPassword = form.temporaryPassword.trim();
 
     if (!fullName || !email) {
       setErrorMessage("Full name and email are required.");
+      return;
+    }
+
+    if (!editingDriver && !temporaryPassword) {
+      setErrorMessage("Temporary password is required.");
       return;
     }
 
@@ -275,7 +286,7 @@ export default function DriversPage() {
       const payload = {
         full_name: fullName,
         email,
-        phone: form.phone.trim() || null,
+        phone: phone || null,
         vehicle_number: form.vehicleNumber.trim() || null,
         branch_id: form.branchId || null,
         role: "driver",
@@ -291,29 +302,20 @@ export default function DriversPage() {
 
         setSuccessMessage("Driver updated successfully.");
       } else {
-        const { data: existingProfile, error: existingProfileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("email", email)
-          .maybeSingle();
+        const response = await createStaffUser({
+          email,
+          temporaryPassword,
+          fullName,
+          phone,
+          role: "driver",
+          branchId: form.branchId || null,
+          vehicleNumber: form.vehicleNumber.trim(),
+          isActive: form.isActive,
+        });
 
-        if (existingProfileError) {
-          throw existingProfileError;
-        }
-
-        if (!existingProfile?.id) {
-          throw new Error(
-            "No Supabase profile was found for this email. Invite or create the auth user first, then save the driver record.",
-          );
-        }
-
-        const { error } = await supabase.from("profiles").update(payload).eq("id", existingProfile.id);
-
-        if (error) {
-          throw error;
-        }
-
-        setSuccessMessage("Driver linked to the existing Supabase user successfully.");
+        setSuccessMessage(
+          response.message || "Driver account created successfully.",
+        );
       }
 
       closeForm();
@@ -622,7 +624,7 @@ export default function DriversPage() {
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">
-                {editingDriver ? "Edit Driver" : "Link Driver to Supabase User"}
+                {editingDriver ? "Edit Driver" : "Create Driver Account"}
               </h2>
               <button
                 type="button"
@@ -635,7 +637,7 @@ export default function DriversPage() {
 
             {!editingDriver && (
               <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                New drivers must already have a Supabase auth/profile record for the entered email.
+                Create a secure Supabase account with a temporary password, branch assignment, and vehicle number.
               </p>
             )}
 
@@ -671,8 +673,23 @@ export default function DriversPage() {
                     value={form.phone}
                     onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
+                    required={!editingDriver}
                   />
                 </label>
+
+                {!editingDriver && (
+                  <label className="space-y-1.5">
+                    <span className="text-sm font-medium text-gray-700">Temporary Password</span>
+                    <input
+                      type="password"
+                      value={form.temporaryPassword}
+                      onChange={(event) => setForm((current) => ({ ...current, temporaryPassword: event.target.value }))}
+                      className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
+                      required
+                      minLength={8}
+                    />
+                  </label>
+                )}
 
                 <label className="space-y-1.5">
                   <span className="text-sm font-medium text-gray-700">Vehicle Number</span>
@@ -681,6 +698,7 @@ export default function DriversPage() {
                     value={form.vehicleNumber}
                     onChange={(event) => setForm((current) => ({ ...current, vehicleNumber: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
+                    required={!editingDriver}
                   />
                 </label>
 
@@ -691,6 +709,7 @@ export default function DriversPage() {
                     onChange={(event) => setForm((current) => ({ ...current, branchId: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
                     disabled={profile?.role === "branch_manager"}
+                    required={!editingDriver}
                   >
                     <option value="">Unassigned</option>
                     {branches.map((branch) => (

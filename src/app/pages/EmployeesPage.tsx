@@ -27,6 +27,7 @@ import {
   matchesSearch,
   paginateRows,
 } from "../lib/erp";
+import { createStaffUser } from "../lib/staffProvisioning";
 import { supabase } from "../../utils/supabase";
 
 interface BranchOption {
@@ -49,6 +50,7 @@ interface EmployeeFormState {
   fullName: string;
   email: string;
   phone: string;
+  temporaryPassword: string;
   role: UserRole;
   branchId: string;
   isActive: boolean;
@@ -75,6 +77,7 @@ const emptyForm: EmployeeFormState = {
   fullName: "",
   email: "",
   phone: "",
+  temporaryPassword: "",
   role: "branch_employee",
   branchId: "",
   isActive: true,
@@ -117,9 +120,30 @@ export default function EmployeesPage() {
     }
 
     return roleOptions.filter((option) =>
-      ["branch_employee", "operations", "accountant"].includes(option.value),
+      ["branch_employee", "operations"].includes(option.value),
     );
   }, [profile?.role]);
+
+  const formRoleOptions = useMemo(() => {
+    if (!editingEmployee) {
+      return availableRoleOptions;
+    }
+
+    const currentRoleOption = roleOptions.find(
+      (option) => option.value === editingEmployee.role,
+    );
+
+    if (
+      currentRoleOption &&
+      !availableRoleOptions.some(
+        (option) => option.value === currentRoleOption.value,
+      )
+    ) {
+      return [currentRoleOption, ...availableRoleOptions];
+    }
+
+    return availableRoleOptions;
+  }, [availableRoleOptions, editingEmployee]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -228,6 +252,7 @@ export default function EmployeesPage() {
       fullName: employee.full_name,
       email: employee.email,
       phone: employee.phone || "",
+      temporaryPassword: "",
       role: employee.role,
       branchId: employee.branch_id || "",
       isActive: employee.is_active,
@@ -256,9 +281,16 @@ export default function EmployeesPage() {
 
     const fullName = form.fullName.trim();
     const email = form.email.trim().toLowerCase();
+    const phone = form.phone.trim();
+    const temporaryPassword = form.temporaryPassword.trim();
 
     if (!fullName || !email) {
       setErrorMessage("Full name and email are required.");
+      return;
+    }
+
+    if (!editingEmployee && !temporaryPassword) {
+      setErrorMessage("Temporary password is required.");
       return;
     }
 
@@ -275,7 +307,7 @@ export default function EmployeesPage() {
       const payload = {
         full_name: fullName,
         email,
-        phone: form.phone.trim() || null,
+        phone: phone || null,
         role: form.role,
         branch_id: form.branchId || null,
         is_active: form.isActive,
@@ -290,29 +322,19 @@ export default function EmployeesPage() {
 
         setSuccessMessage("Employee updated successfully.");
       } else {
-        const { data: existingProfile, error: existingProfileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("email", email)
-          .maybeSingle();
+        const response = await createStaffUser({
+          email,
+          temporaryPassword,
+          fullName,
+          phone,
+          role: form.role,
+          branchId: form.branchId || null,
+          isActive: form.isActive,
+        });
 
-        if (existingProfileError) {
-          throw existingProfileError;
-        }
-
-        if (!existingProfile?.id) {
-          throw new Error(
-            "No Supabase profile was found for this email. Invite or create the auth user first, then save the employee record.",
-          );
-        }
-
-        const { error } = await supabase.from("profiles").update(payload).eq("id", existingProfile.id);
-
-        if (error) {
-          throw error;
-        }
-
-        setSuccessMessage("Employee linked to the existing Supabase user successfully.");
+        setSuccessMessage(
+          response.message || "Employee account created successfully.",
+        );
       }
 
       closeForm();
@@ -614,7 +636,7 @@ export default function EmployeesPage() {
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">
-                {editingEmployee ? "Edit Employee" : "Link Employee to Supabase User"}
+                {editingEmployee ? "Edit Employee" : "Create Employee Account"}
               </h2>
               <button
                 type="button"
@@ -627,7 +649,7 @@ export default function EmployeesPage() {
 
             {!editingEmployee && (
               <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                New employees must already have a Supabase auth/profile record for the entered email.
+                Create a secure Supabase account with a temporary password, then manage the employee profile automatically.
               </p>
             )}
 
@@ -663,8 +685,23 @@ export default function EmployeesPage() {
                     value={form.phone}
                     onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
+                    required={!editingEmployee}
                   />
                 </label>
+
+                {!editingEmployee && (
+                  <label className="space-y-1.5">
+                    <span className="text-sm font-medium text-gray-700">Temporary Password</span>
+                    <input
+                      type="password"
+                      value={form.temporaryPassword}
+                      onChange={(event) => setForm((current) => ({ ...current, temporaryPassword: event.target.value }))}
+                      className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
+                      required
+                      minLength={8}
+                    />
+                  </label>
+                )}
 
                 <label className="space-y-1.5">
                   <span className="text-sm font-medium text-gray-700">Role</span>
@@ -673,7 +710,7 @@ export default function EmployeesPage() {
                     onChange={(event) => setForm((current) => ({ ...current, role: normalizeRole(event.target.value) }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
                   >
-                    {availableRoleOptions.map((option) => (
+                    {formRoleOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -688,6 +725,7 @@ export default function EmployeesPage() {
                     onChange={(event) => setForm((current) => ({ ...current, branchId: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none focus:border-red-600"
                     disabled={profile?.role === "branch_manager"}
+                    required={!editingEmployee && form.role !== "super_admin"}
                   >
                     <option value="">Unassigned</option>
                     {branches.map((branch) => (
