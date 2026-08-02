@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import App from "./app/App";
 import { AuthProvider } from "./app/contexts/AuthContext";
 
+import "./styles/tailwind.css";
 import "./styles/index.css";
 import "./styles/role-pages.css";
 
