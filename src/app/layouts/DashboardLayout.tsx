@@ -55,6 +55,46 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    label: "حركة الشحنات",
+    path: "/branch/shipment-movement",
+    icon: Package,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "الحسابات اليومية",
+    path: "/branch/daily-accounts",
+    icon: CircleDollarSign,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "أداء الموظفين",
+    path: "/branch/employee-performance",
+    icon: Users,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
+    label: "أداء السائقين",
+    path: "/branch/driver-performance",
+    icon: Truck,
+    roles: [
+      "super_admin",
+      "branch_manager",
+      "accountant",
+    ],
+  },
+  {
     label: "وضع المكتب",
     path: "/staff/office",
     icon: Package,

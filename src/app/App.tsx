@@ -24,6 +24,10 @@ import OfficeDashboardPage from "./pages/staff/OfficeDashboardPage";
 import DeliveryDashboardPage from "./pages/staff/DeliveryDashboardPage";
 
 import BranchManagerDashboardPage from "./pages/branch/BranchManagerDashboardPage";
+import BranchShipmentMovementPage from "./pages/branch/BranchShipmentMovementPage";
+import DailyAccountsPage from "./pages/branch/DailyAccountsPage";
+import EmployeePerformancePage from "./pages/branch/EmployeePerformancePage";
+import DriverPerformancePage from "./pages/branch/DriverPerformancePage";
 import CompanyDashboardPage from "./pages/admin/CompanyDashboardPage";
 
 import BranchesPage from "./pages/BranchesPage";
@@ -233,6 +237,66 @@ export default function App() {
               ]}
             >
               <BranchManagerDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/branch/shipment-movement"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <BranchShipmentMovementPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/branch/daily-accounts"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <DailyAccountsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/branch/employee-performance"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <EmployeePerformancePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/branch/driver-performance"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "super_admin",
+                "branch_manager",
+                "accountant",
+              ]}
+            >
+              <DriverPerformancePage />
             </ProtectedRoute>
           }
         />
