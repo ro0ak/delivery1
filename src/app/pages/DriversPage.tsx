@@ -324,7 +324,9 @@ export default function DriversPage() {
     } catch (error) {
       console.error("Failed to save driver:", error);
       setErrorMessage(
-        error instanceof Error ? `Failed to save driver: ${error.message}` : "Failed to save driver.",
+        error instanceof Error
+          ? error.message
+          : "Failed to save driver.",
       );
     } finally {
       setSaving(false);

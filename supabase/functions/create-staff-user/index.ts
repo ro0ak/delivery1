@@ -192,11 +192,13 @@ serve(async (request) => {
     return jsonResponse(401, { error: "تعذر التحقق من هوية المستخدم." });
   }
 
-  const { data: callerProfile, error: callerProfileError } = await admin
+  const { data: callerProfileData, error: callerProfileError } = await admin
     .from("profiles")
     .select("id,role,branch_id,is_active")
     .eq("id", authData.user.id)
-    .maybeSingle<CallerProfile>();
+    .maybeSingle();
+
+  const callerProfile = callerProfileData as CallerProfile | null;
 
   if (callerProfileError) {
     console.error("Failed to load caller profile:", callerProfileError);
@@ -243,7 +245,7 @@ serve(async (request) => {
   const { data: existingProfiles, error: existingProfilesError } = await admin
     .from("profiles")
     .select("id")
-    .eq("email", data.email)
+    .ilike("email", data.email)
     .limit(1);
 
   if (existingProfilesError) {

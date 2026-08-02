@@ -343,7 +343,9 @@ export default function EmployeesPage() {
     } catch (error) {
       console.error("Failed to save employee:", error);
       setErrorMessage(
-        error instanceof Error ? `Failed to save employee: ${error.message}` : "Failed to save employee.",
+        error instanceof Error
+          ? error.message
+          : "Failed to save employee.",
       );
     } finally {
       setSaving(false);
